@@ -161,13 +161,24 @@
                   </button>
                 </div>
 
+                <div class="fs-nav" id="fsNav">
+                  <button class="fs-nav-btn" type="button" id="btnPrevFs" aria-label="โค้ดก่อนหน้า">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+                    <span>ก่อนหน้า</span>
+                  </button>
+                  <span class="fs-nav-code" id="fsCode">—</span>
+                  <button class="fs-nav-btn" type="button" id="btnNextFs" aria-label="โค้ดถัดไป">
+                    <span>โค้ดถัดไป</span>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+                  </button>
+                </div>
+
                 <div class="stage-label bottom">ผู้ชม · AUDIENCE</div>
 
                 <div class="lyric-strip" id="lyricStrip" aria-live="polite">
                   <div class="ls-body">
                     <div class="ls-top">
                       <span class="ls-code" id="lyricCode">—</span>
-                      <span class="ls-name" id="lyricName">—</span>
                       <span class="ls-count" id="lyricCount"></span>
                     </div>
                     <p class="ls-line" id="lyricLine">—</p>

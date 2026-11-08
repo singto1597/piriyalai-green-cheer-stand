@@ -38,14 +38,106 @@
   const LYRIC_SECTION = {
     1: [0, 0, 1, 1, 1, 1, 2, 3, 3],
     2: [0, 0, 0, 1, 1, 1, 2, 3, 7],
-    3: [0, 0, 0, 0, 4, 4, 5, 5, 6, 5, 5, 6, 6, 8, 5, 6, 9],
+    3: [0, 0, 0, 0, 4, 4, 5, 5, 6, 5, 5, 6, 6, 3, 5, 6, 9],
     4: [0, 0, 0, 1, 1, 1, 2, 2],
     5: [0, 0, 0, 1, 1, 1, 2, 2, 2],
-    6: [0, 0, 0, 1],
-    7: [0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, -1],
+    6: [0, 0, 0, 0],
+    7: [0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 2, 2, 2, -1],
     8: [0, 0, 0, 0, 0, 0, 1, 2],
     9: [5, 5, 7],
     10: [0, 0, 0, 0, 0],
+  };
+
+  /* Curated words to highlight in the lyric line for each code.  The word
+     is rendered in the frame's accent colour instead of explaining the code
+     in text.  Keys are step codes; values are exact substrings of the lyric
+     line selected by LYRIC_SECTION. */
+  const LYRIC_HIGHLIGHT = {
+    // 1 · ขึ้นมือ G
+    '1.7': ['เชียร์'],
+    '1.8': ['สวัสดีค่ะ'],
+    '1.9': ['สวัสดีครับ', 'สวัสดีค่ะ'],
+    // 2 · กลอนโรงเรียน
+    '2.1': ['น้อมหทัย'],
+    '2.2': ['เทิดคุณค่า'],
+    '2.3': ['สถาบัน'],
+    '2.4': ['ขาวแดงนั้น'],
+    '2.5': ['งามเรืองรอง'],
+    '2.6': ['ผ่องศักดิ์ศรี'],
+    '2.7': ['ร้อยใจภักดิ์', 'สามัคคี'],
+    '2.8': ['สถาบัน', 'ที่แห่งนี้'],
+    '2.9': ['ลัย'],
+    // 3 · มาร์ช
+    '3.1': ['วิริเยนฺ'],
+    '3.2': ['ทุกขมจฺ'],
+    '3.3': ['เจติ'],
+    '3.4': ['คนล่วงทุกข์'],
+    '3.5': ['พิริยาลัย'],
+    '3.6': ['พิริยาลัย'],
+    '3.11': ['ไว้'],
+    '3.12': ['เปรียบ'],
+    '3.13': ['เทียบ'],
+    '3.14': ['ร่วมใจ'],
+    '3.15': ['ประกาศศักดิ์ศรี'],
+    '3.16': ['เทียบ'],
+    '3.17': ['พิริยาลัย'],
+    // 4 · พวกเรายิ่งใหญ่
+    '4.1': ['พวกเรา', 'ยิ่งใหญ่', 'เกรียงไกร'],
+    '4.2': ['ยืนยง', 'พงไพร'],
+    '4.3': ['ดำรงคู่ฟ้า'],
+    '4.4': ['กล้าหาญ'],
+    '4.5': ['กล้าแกร่ง'],
+    '4.6': ['มา'],
+    '4.7': ['เกรง'],
+    '4.8': ['ผู้ใด'],
+    // 5 · เสียงกลองประชัน
+    '5.1': ['เสียงกลองประจัญ'],
+    '5.2': ['ฝ่าฟันมุ่งไป'],
+    '5.3': ['ผ่านเพลงยิ่งใหญ่'],
+    '5.4': ['ไม่เคยกลัวใคร'],
+    '5.5': ['แม้ว่าผู้ใด'],
+    '5.6': ['ก้าวสู้ต่อไป'],
+    '5.7': ['ด้วยใจของเรา'],
+    '5.8': ['สู้ด้วยหัวใจ'],
+    '5.9': ['ด้วยใจของเรา'],
+    // 6 · เอ้าวันเดียวกัน
+    '6.1': ['วันเดียวกัน'],
+    '6.2': ['ใจ'],
+    '6.3': ['นึก'],
+    '6.4': ['หวาดหวั่น'],
+    // 7 · เอ้ามุ่งหน้าไป
+    '7.1': ['ไป', 'พลัง'],
+    '7.2': ['เปี่ยม'],
+    '7.3': ['ความหวัง'],
+    '7.4': ['ที่จะนำ'],
+    '7.5': ['ชัยมา'],
+    '7.6': ['เดินหน้า'],
+    '7.7': ['ไป'],
+    '7.8': ['ใจ'],
+    '7.9': ['ผู้'],
+    '7.10': ['คว้า'],
+    '7.11': ['มา'],
+    '7.12': ['ให้'],
+    '7.13': ['เขียว'],
+    // 8 · ไม่หวาดหวั่น
+    '8.1': ['สีเขียว'],
+    '8.2': ['ไม่หวาด'],
+    '8.3': ['หวั่นใคร'],
+    '8.4': ['บุกเข้าไป'],
+    '8.5': ['เอาชิงเอาชัย'],
+    '8.6': ['เบื้องหน้า'],
+    '8.7': ['ศักดิ์ศรีของเรา'],
+    '8.8': ['ต้องนำชัยมา'],
+    // 9 · คอนเซปต์
+    '9.1': ['คอนเซปต์ 1'],
+    '9.2': ['คอนเซปต์ 1'],
+    '9.3': ['คอนเซปต์ 2'],
+    // 10 · เมดเล่ย์
+    '10.1': ['พวกเรา'],
+    '10.2': ['ไม่เกรง'],
+    '10.3': ['ไม่กลัว'],
+    '10.4': ['ต่ออัน'],
+    '10.5': ['ตราย'],
   };
 
   /* ---------- palette classes ---------- */
@@ -405,6 +497,8 @@
     $('#playerSub').textContent = song.subtitle + (allWhite ? ' · หน้านี้เป็นโพยลำดับ ไม่มีกริดสี' : '');
     $('#playerCode').textContent = st.code;
     $('#playerCounter').textContent = `เฟรม ${st.i + 1} / ${song.steps.length} · ทั้งงาน ${st.gi + 1}/${flat.length}`;
+    const fsCode = $('#fsCode');
+    if (fsCode) fsCode.textContent = `${st.code} · ${st.gi + 1}/${flat.length}`;
     const scrub = $('#scrub');
     scrub.max = String(flat.length);
     scrub.value = String(st.gi + 1);
@@ -420,6 +514,50 @@
     updateRail('stepPills');
   }
 
+  function lyricAccent(st) {
+    const skip = new Set(['#ffffff', '#000000', '#999999', '#b7b7b7']);
+    let best = '#548235';
+    let bestN = -1;
+    st.counts.forEach((n, h) => {
+      if (skip.has(h)) return;
+      if (n > bestN) { bestN = n; best = h; }
+    });
+    return best;
+  }
+
+  function lyricHTML(line, words, accent) {
+    const meta = A.colors[accent] || { text: '#ffffff' };
+    const ranges = [];
+    (words || []).forEach((w) => {
+      if (!w) return;
+      let from = 0;
+      while (from <= line.length) {
+        const i = line.indexOf(w, from);
+        if (i < 0) break;
+        ranges.push([i, i + w.length]);
+        from = i + w.length;
+      }
+    });
+    ranges.sort((a, b) => a[0] - b[0] || b[1] - a[1]);
+    const merged = [];
+    ranges.forEach(([s, e]) => {
+      const last = merged[merged.length - 1];
+      if (last && s <= last[1]) last[1] = Math.max(last[1], e);
+      else merged.push([s, e]);
+    });
+    if (!merged.length) return esc(line);
+    const text = meta.text || '#ffffff';
+    let out = '';
+    let cursor = 0;
+    merged.forEach(([s, e]) => {
+      out += esc(line.slice(cursor, s));
+      out += `<mark class="lyric-hl" style="--hl:${accent};--hl-text:${text}">${esc(line.slice(s, e))}</mark>`;
+      cursor = e;
+    });
+    out += esc(line.slice(cursor));
+    return out;
+  }
+
   function renderLyric() {
     const song = curSong();
     const st = curStep();
@@ -428,10 +566,9 @@
     const valid = Number.isInteger(li) && li >= 0 && li < (song.lyrics || []).length;
     const line = valid ? song.lyrics[li] : '';
     $('#lyricCode').textContent = st.code;
-    $('#lyricName').textContent = st.name || '—';
     $('#lyricCount').textContent = valid ? `ท่อน ${li + 1}/${song.lyrics.length}` : '';
     const lineEl = $('#lyricLine');
-    lineEl.textContent = valid ? line : '— เฟรมแทรก ไม่มีคำร้อง —';
+    lineEl.innerHTML = valid ? lyricHTML(line, LYRIC_HIGHLIGHT[st.code] || [], lyricAccent(st)) : '— เฟรมแทรก ไม่มีคำร้อง —';
     lineEl.classList.toggle('is-empty', !valid);
     $('#lyricCue').textContent = st.cue || '—';
   }
@@ -1269,6 +1406,8 @@
 
     $('#btnPrev').addEventListener('click', prev);
     $('#btnNext').addEventListener('click', next);
+    $('#btnPrevFs').addEventListener('click', prev);
+    $('#btnNextFs').addEventListener('click', next);
     $('#btnPlay').addEventListener('click', toggleAuto);
     $('#btnSpeed').addEventListener('click', () => {
       state.speedIdx = (state.speedIdx + 1) % SPEEDS.length;
