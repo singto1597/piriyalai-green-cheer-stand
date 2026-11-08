@@ -34,112 +34,6 @@
     caret: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>',
   };
 
-  /* Curated step -> lyric line mapping (line index, -1 = instrumental frame) */
-  const LYRIC_SECTION = {
-    1: [0, 0, 1, 1, 1, 1, 2, 3, 3],
-    2: [0, 0, 0, 1, 1, 1, 2, 3, 7],
-    3: [0, 0, 0, 0, 4, 4, 5, 5, 6, 5, 5, 6, 6, 3, 5, 6, 9],
-    4: [0, 0, 0, 1, 1, 1, 2, 2],
-    5: [0, 0, 0, 1, 1, 1, 2, 2, 2],
-    6: [0, 0, 0, 0],
-    7: [0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 2, 2, 2, -1],
-    8: [0, 0, 0, 0, 0, 0, 1, 2],
-    9: [5, 5, 7],
-    10: [0, 0, 0, 0, 0],
-  };
-
-  /* Curated words to highlight in the lyric line for each code.  The word
-     is rendered in the frame's accent colour instead of explaining the code
-     in text.  Keys are step codes; values are exact substrings of the lyric
-     line selected by LYRIC_SECTION. */
-  const LYRIC_HIGHLIGHT = {
-    // 1 · ขึ้นมือ G
-    '1.7': ['เชียร์'],
-    '1.8': ['สวัสดีค่ะ'],
-    '1.9': ['สวัสดีครับ', 'สวัสดีค่ะ'],
-    // 2 · กลอนโรงเรียน
-    '2.1': ['น้อมหทัย'],
-    '2.2': ['เทิดคุณค่า'],
-    '2.3': ['สถาบัน'],
-    '2.4': ['ขาวแดงนั้น'],
-    '2.5': ['งามเรืองรอง'],
-    '2.6': ['ผ่องศักดิ์ศรี'],
-    '2.7': ['ร้อยใจภักดิ์', 'สามัคคี'],
-    '2.8': ['สถาบัน', 'ที่แห่งนี้'],
-    '2.9': ['ลัย'],
-    // 3 · มาร์ช
-    '3.1': ['วิริเยนฺ'],
-    '3.2': ['ทุกขมจฺ'],
-    '3.3': ['เจติ'],
-    '3.4': ['คนล่วงทุกข์'],
-    '3.5': ['พิริยาลัย'],
-    '3.6': ['พิริยาลัย'],
-    '3.11': ['ไว้'],
-    '3.12': ['เปรียบ'],
-    '3.13': ['เทียบ'],
-    '3.14': ['ร่วมใจ'],
-    '3.15': ['ประกาศศักดิ์ศรี'],
-    '3.16': ['เทียบ'],
-    '3.17': ['พิริยาลัย'],
-    // 4 · พวกเรายิ่งใหญ่
-    '4.1': ['พวกเรา', 'ยิ่งใหญ่', 'เกรียงไกร'],
-    '4.2': ['ยืนยง', 'พงไพร'],
-    '4.3': ['ดำรงคู่ฟ้า'],
-    '4.4': ['กล้าหาญ'],
-    '4.5': ['กล้าแกร่ง'],
-    '4.6': ['มา'],
-    '4.7': ['กว่า'],
-    '4.8': ['ผู้ใด'],
-    // 5 · เสียงกลองประชัน
-    '5.1': ['เสียงกลองประจัญ'],
-    '5.2': ['ฝ่าฟันมุ่งไป'],
-    '5.3': ['ผ่านเพลงยิ่งใหญ่'],
-    '5.4': ['ไม่เคยกลัวใคร'],
-    '5.5': ['แม้ว่าผู้ใด'],
-    '5.6': ['ก้าวสู้ต่อไป'],
-    '5.7': ['ด้วยใจของเรา'],
-    '5.8': ['สู้ด้วยหัวใจ'],
-    '5.9': ['ด้วยใจของเรา'],
-    // 6 · เอ้าวันเดียวกัน
-    '6.1': ['วันเดียวกัน'],
-    '6.2': ['ใจ'],
-    '6.3': ['นึก'],
-    '6.4': ['หวาดหวั่น'],
-    // 7 · เอ้ามุ่งหน้าไป
-    '7.1': ['ไป', 'พลัง'],
-    '7.2': ['เปี่ยม'],
-    '7.3': ['ความหวัง'],
-    '7.4': ['ที่จะนำ'],
-    '7.5': ['ชัยมา'],
-    '7.6': ['เดินหน้า'],
-    '7.7': ['ไป'],
-    '7.8': ['ใจ'],
-    '7.9': ['ผู้'],
-    '7.10': ['คว้า'],
-    '7.11': ['มา'],
-    '7.12': ['ให้'],
-    '7.13': ['เขียว'],
-    // 8 · ไม่หวาดหวั่น
-    '8.1': ['สีเขียว'],
-    '8.2': ['ไม่หวาด'],
-    '8.3': ['หวั่นใคร'],
-    '8.4': ['บุกเข้าไป'],
-    '8.5': ['เอาชิงเอาชัย'],
-    '8.6': ['เบื้องหน้า'],
-    '8.7': ['ศักดิ์ศรีของเรา'],
-    '8.8': ['ต้องนำชัยมา'],
-    // 9 · คอนเซปต์
-    '9.1': ['คอนเซปต์ 1'],
-    '9.2': ['คอนเซปต์ 1'],
-    '9.3': ['คอนเซปต์ 2'],
-    // 10 · เมดเล่ย์
-    '10.1': ['พวกเรา'],
-    '10.2': ['ไม่เกรง'],
-    '10.3': ['ไม่กลัว'],
-    '10.4': ['ต่ออัน'],
-    '10.5': ['ตราย'],
-  };
-
   /* ---------- palette classes ---------- */
   (function injectPalette() {
     const style = document.createElement('style');
@@ -175,6 +69,51 @@
     st.gi = flat.length;
     flat.push(st);
   }));
+
+  /* ---------- timing ----------
+     แต่ละเฟรมมีระยะเวลา = beats × 60000 / bpm ของเพลง
+     ค่า beats/bpm มาจาก tools/data/*.csv ผ่าน tools/build_data.py
+     ถ้าโหลด bundle เก่าที่ไม่มีฟิลด์นี้ จะ fallback เป็น 120 BPM / 16 บีต */
+  const DEFAULT_BPM = 120;
+  const DEFAULT_BEATS = 16;
+  let showMs = 0;
+  songs.forEach((song) => {
+    song.bpm = Number(song.bpm) > 0 ? Number(song.bpm) : DEFAULT_BPM;
+    const songStart = showMs;
+    let songMs = 0;
+    song.steps.forEach((st) => {
+      st.beats = Number(st.beats) > 0 ? Number(st.beats) : DEFAULT_BEATS;
+      st.durMs = Math.max(1, st.beats * 60000 / song.bpm);
+      st.startMs = songStart + songMs;
+      songMs += st.durMs;
+    });
+    song.startMs = songStart;
+    song.durMs = songMs;
+    showMs += songMs;
+  });
+  const SHOW_MS = Math.max(1, showMs);
+
+  function frameAtMs(ms) {
+    const t = Math.max(0, Math.min(SHOW_MS, ms));
+    let lo = 0;
+    let hi = flat.length - 1;
+    let ans = 0;
+    while (lo <= hi) {
+      const mid = (lo + hi) >> 1;
+      if (flat[mid].startMs <= t) { ans = mid; lo = mid + 1; } else hi = mid - 1;
+    }
+    return ans;
+  }
+
+  function fmtMs(ms) {
+    const s = Math.max(0, Math.round(ms / 1000));
+    return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
+  }
+
+  function fmtSec(ms) {
+    const s = Math.max(0, ms / 1000);
+    return s < 10 ? s.toFixed(1) : String(Math.round(s));
+  }
 
   /* ---------- global analytics ---------- */
   const colorUsage = new Map(PALETTE.map((h) => [h, { cells: 0, frames: 0, songs: new Set() }]));
@@ -286,7 +225,11 @@
   }
 
   /* ---------- state ---------- */
-  const SPEEDS = [{ ms: 1500, label: '0.6×' }, { ms: 950, label: '1×' }, { ms: 550, label: '1.8×' }];
+  const SPEEDS = [
+    { rate: 0.6, label: '0.6×' },
+    { rate: 1, label: '1×' },
+    { rate: 1.8, label: '1.8×' },
+  ];
   const state = {
     view: 'stand',
     si: 0,
@@ -307,6 +250,8 @@
     theaterOff: false,
     codesOn: true,
     nextAdvanceAt: 0,
+    dragMs: null,
+    desktopScrubActive: false,
   };
 
   const seatIndex = () => (state.seat ? SEAT_INDEX.get(state.seat) : -1);
@@ -342,6 +287,30 @@
 
   const curSong = () => songs[state.si];
   const curStep = () => songs[state.si].steps[state.step];
+
+  function framePlayMs(st) {
+    return st.durMs / SPEEDS[state.speedIdx].rate;
+  }
+
+  function elapsedInFrame() {
+    if (!state.autoplay || !state.nextAdvanceAt) return 0;
+    const total = framePlayMs(curStep());
+    return Math.max(0, Math.min(total, total - (state.nextAdvanceAt - Date.now())));
+  }
+
+  function timelineMs() {
+    if (state.dragMs != null) {
+      return Math.max(0, Math.min(SHOW_MS, state.dragMs));
+    }
+    return Math.min(SHOW_MS, curStep().startMs + elapsedInFrame());
+  }
+
+  function syncScrubTime() {
+    const el = $('#scrub');
+    if (!el || state.desktopScrubActive) return;
+    el.value = String(Math.round(timelineMs()));
+    setRange(el);
+  }
 
   /* ---------- toast ---------- */
   let toastTimer = null;
@@ -416,6 +385,7 @@
     state.step = st.i;
     if (state.view !== 'stand') setView('stand');
     else { renderStandAll(); updateHash(); }
+    if (state.autoplay) scheduleNext();
   }
 
   function next() { goGlobal(curStep().gi + 1); }
@@ -434,25 +404,43 @@
     });
     document.body.classList.toggle('is-playing', state.autoplay);
   }
+  function clearAutoTimer() {
+    if (autoTimer) clearTimeout(autoTimer);
+    autoTimer = null;
+    state.nextAdvanceAt = 0;
+  }
+  function scheduleNext() {
+    clearAutoTimer();
+    if (!state.autoplay) return;
+    const ms = Math.max(1, framePlayMs(curStep()));
+    state.nextAdvanceAt = Date.now() + ms;
+    autoTimer = setTimeout(autoTick, ms);
+  }
+  function autoTick() {
+    autoTimer = null;
+    if (!state.autoplay) return;
+    if (curStep().gi >= flat.length - 1) {
+      stopAuto();
+      showToast('จบการแสดงแล้ว · ' + fmtMs(SHOW_MS));
+      return;
+    }
+    next();
+  }
   function stopAuto() {
     state.autoplay = false;
-    state.nextAdvanceAt = 0;
-    if (autoTimer) clearInterval(autoTimer);
-    autoTimer = null;
+    clearAutoTimer();
+    state.dragMs = null;
     updatePlayBtn();
     renderMyCard();
   }
   function startAuto() {
     stopAuto();
+    if (curStep().gi >= flat.length - 1) goGlobal(0);
     state.autoplay = true;
-    const ms = SPEEDS[state.speedIdx].ms;
-    state.nextAdvanceAt = Date.now() + ms;
-    autoTimer = setInterval(() => {
-      state.nextAdvanceAt = Date.now() + ms;
-      next();
-    }, ms);
+    scheduleNext();
     updatePlayBtn();
     renderMyCard();
+    renderPlayerChrome();
   }
   function toggleAuto() {
     if (state.autoplay) stopAuto();
@@ -469,7 +457,7 @@
         <span class="st-num">${String(s.id).padStart(2, '0')}</span>
         <span class="st-body">
           <span class="st-title">${esc(s.title)}</span>
-          <span class="st-sub">CODE ${esc(s.showCode)} · ${s.steps.length} เฟรม</span>
+          <span class="st-sub">CODE ${esc(s.showCode)} · ${s.steps.length} เฟรม · ${fmtMs(s.durMs)}</span>
         </span>
       </button>`).join('');
     updateRail('songTabs');
@@ -525,7 +513,7 @@
     const card = $('#playerCard');
     card.style.setProperty('--sa', song.theme[0]);
     card.style.setProperty('--sb', song.theme[1]);
-    $('#playerKicker').textContent = `SONG ${String(song.id).padStart(2, '0')} · ${codeLabel(song)}`;
+    $('#playerKicker').textContent = `SONG ${String(song.id).padStart(2, '0')} · ${codeLabel(song)} · ${song.bpm} BPM`;
     $('#playerTitle').textContent = song.title;
     const allWhite = song.steps.every((x) => x.colored === 0);
     $('#playerSub').textContent = song.subtitle + (allWhite ? ' · หน้านี้เป็นโพยลำดับ ไม่มีกริดสี' : '');
@@ -534,9 +522,13 @@
     const fsCode = $('#fsCode');
     if (fsCode) fsCode.textContent = `${st.code} · ${st.gi + 1}/${flat.length}`;
     const scrub = $('#scrub');
-    scrub.max = String(flat.length);
-    scrub.value = String(st.gi + 1);
-    setRange(scrub);
+    scrub.min = '0';
+    scrub.max = String(Math.round(SHOW_MS));
+    scrub.step = '100';
+    if (!state.desktopScrubActive) {
+      scrub.value = String(Math.round(timelineMs()));
+      setRange(scrub);
+    }
     $('#btnSpeed').textContent = SPEEDS[state.speedIdx].label;
     const dom = dominantPal(st);
     $('#stepPills').innerHTML = song.steps.map((x, j) => `
@@ -553,27 +545,31 @@
   function renderPlayerChrome() {
     const st = curStep();
     const total = flat.length;
-    const pct = ((st.gi + 1) / total) * 100;
+    const nowMs = timelineMs();
+    const pct = Math.max(0, Math.min(100, (nowMs / SHOW_MS) * 100));
     const codeEls = [$('#mhCode'), $('#thCode')];
     codeEls.forEach((el) => { if (el) el.textContent = st.code; });
     const ticker = `เฟรม ${st.gi + 1} / ${total}`;
-    const counters = [
-      $('#mhCounter'), $('#thCounter'), $('#thTime'),
-    ];
+    const counters = [$('#mhCounter'), $('#thCounter')];
     counters.forEach((el) => { if (el) el.textContent = ticker; });
+    const time = $('#thTime');
+    if (time) time.textContent = `${fmtMs(nowMs)} / ${fmtMs(SHOW_MS)}`;
     const fill = $('#thFill');
     if (fill) fill.style.width = pct + '%';
     const knob = $('#thKnob');
     if (knob) knob.style.left = pct + '%';
     const track = $('#thTrack');
     if (track) {
-      track.setAttribute('aria-valuemax', String(total));
-      track.setAttribute('aria-valuenow', String(st.gi + 1));
+      track.setAttribute('aria-valuemin', '0');
+      track.setAttribute('aria-valuemax', String(Math.round(SHOW_MS)));
+      track.setAttribute('aria-valuenow', String(Math.round(nowMs)));
+      track.setAttribute('aria-valuetext', `${fmtMs(nowMs)} จาก ${fmtMs(SHOW_MS)}`);
     }
     const speed = $('#thSpeed');
     if (speed) speed.textContent = SPEEDS[state.speedIdx].label;
     const frameLabel = $('#myFrameLabel');
     if (frameLabel) frameLabel.textContent = `${st.code} · เฟรม ${st.gi + 1}/${total}`;
+    syncScrubTime();
   }
 
   function lyricAccent(st) {
@@ -623,13 +619,13 @@
   function renderLyric() {
     const song = curSong();
     const st = curStep();
-    const map = LYRIC_SECTION[song.id] || [];
-    const li = map[st.i];
-    const valid = Number.isInteger(li) && li >= 0 && li < (song.lyrics || []).length;
+    const li = Number.isInteger(st.lyricLine) ? st.lyricLine - 1 : -1;
+    const valid = li >= 0 && li < (song.lyrics || []).length;
     const line = valid ? song.lyrics[li] : '';
+    const words = Array.isArray(st.lyricHighlight) ? st.lyricHighlight : [];
     $('#lyricCode').textContent = st.code;
     $('#lyricCount').textContent = valid ? `ท่อน ${li + 1}/${song.lyrics.length}` : '';
-    const html = valid ? lyricHTML(line, LYRIC_HIGHLIGHT[st.code] || [], lyricAccent(st)) : '';
+    const html = valid ? lyricHTML(line, words, lyricAccent(st)) : '';
     const lineEl = $('#lyricLine');
     lineEl.innerHTML = html || '— เฟรมแทรก ไม่มีคำร้อง —';
     lineEl.classList.toggle('is-empty', !valid);
@@ -659,16 +655,21 @@
     const el = $('#myEta');
     if (!el) return;
     if (!next) { el.textContent = ''; return; }
+    const st = curStep();
+    const end = Math.min(flat.length, st.gi + next.frames);
     if (!state.autoplay) {
-      el.textContent = next.frames === 1 ? 'เปลี่ยนเฟรมถัดไป' : `อีก ${next.frames} เฟรม`;
+      let ms = 0;
+      for (let i = st.gi; i < end; i += 1) ms += flat[i].durMs;
+      el.textContent = `อีก ${next.frames} เฟรม · ~${fmtSec(ms)} วินาที`;
       return;
     }
-    const ms = SPEEDS[state.speedIdx].ms;
-    const remain = state.nextAdvanceAt ? Math.max(0, state.nextAdvanceAt - Date.now()) : ms;
-    const sec = ((next.frames - 1) * ms + remain) / 1000;
-    el.textContent = sec < 0.35
+    let ms = state.nextAdvanceAt
+      ? Math.max(0, state.nextAdvanceAt - Date.now())
+      : framePlayMs(st);
+    for (let i = st.gi + 1; i < end; i += 1) ms += framePlayMs(flat[i]);
+    el.textContent = ms < 350
       ? 'กำลังจะเปลี่ยน'
-      : `เปลี่ยนในอีก ${sec < 10 ? sec.toFixed(1) : Math.round(sec)} วินาที`;
+      : `เปลี่ยนในอีก ${fmtSec(ms)} วินาที`;
   }
 
   function renderMyCard() {
@@ -1772,15 +1773,20 @@
     if (!track) return;
     let dragging = false;
     let pending = 0;
-    const frameAt = (clientX) => {
+    const msAt = (clientX) => {
       const r = track.getBoundingClientRect();
       const t = Math.max(0, Math.min(1, (clientX - r.left) / Math.max(1, r.width)));
-      return Math.round(t * (flat.length - 1));
+      return t * SHOW_MS;
     };
-    const preview = (clientX) => goFast(frameAt(clientX));
+    const preview = (clientX) => {
+      const ms = msAt(clientX);
+      state.dragMs = ms;
+      goFast(frameAtMs(ms));
+    };
     track.addEventListener('pointerdown', (e) => {
       e.preventDefault();
       dragging = true;
+      clearAutoTimer();
       pokePlayer();
       try { track.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
       preview(e.clientX);
@@ -1795,8 +1801,10 @@
     const stop = () => {
       if (!dragging) return;
       dragging = false;
+      state.dragMs = null;
       renderStandAll();
       updateHash();
+      if (state.autoplay) scheduleNext();
     };
     track.addEventListener('pointerup', stop);
     track.addEventListener('pointercancel', stop);
@@ -1960,6 +1968,7 @@
       state.si = si;
       state.step = 0;
       setView('stand');
+      if (state.autoplay) scheduleNext();
       showToast('เปิดหน้า <b>' + esc(song.title) + '</b>');
     });
 
@@ -1969,11 +1978,30 @@
     $('#btnNextFs').addEventListener('click', next);
     $('#btnPlay').addEventListener('click', toggleAuto);
     $('#btnSpeed').addEventListener('click', cycleSpeed);
+    let scrubEndTimer = null;
+    const finishScrub = () => {
+      if (!state.desktopScrubActive) return;
+      state.desktopScrubActive = false;
+      state.dragMs = null;
+      if (state.autoplay) scheduleNext();
+      else renderPlayer();
+    };
+    const scrubEndSoon = () => {
+      clearTimeout(scrubEndTimer);
+      scrubEndTimer = setTimeout(finishScrub, 300);
+    };
     $('#scrub').addEventListener('input', (e) => {
-      const v = Number(e.target.value);
+      const ms = Number(e.target.value);
+      state.desktopScrubActive = true;
+      state.dragMs = ms;
+      clearAutoTimer();
       setRange(e.target);
-      goGlobal(v - 1);
+      goGlobal(frameAtMs(ms));
+      scrubEndSoon();
     });
+    $('#scrub').addEventListener('change', scrubEndSoon);
+    $('#scrub').addEventListener('pointerup', scrubEndSoon);
+    $('#scrub').addEventListener('blur', finishScrub);
 
     $('#stepPills').addEventListener('click', (e) => {
       const btn = e.target.closest('.step-pill');
@@ -1981,6 +2009,7 @@
       state.step = Number(btn.dataset.i);
       renderStandAll();
       updateHash();
+      if (state.autoplay) scheduleNext();
     });
 
     $('#filmstrip').addEventListener('click', (e) => {
@@ -1989,6 +2018,7 @@
       state.step = Number(btn.dataset.i);
       renderStandAll();
       updateHash();
+      if (state.autoplay) scheduleNext();
     });
 
     $('#standGrid').addEventListener('click', (e) => {
@@ -2247,7 +2277,9 @@
     updatePlayerMode();
     applyZoom();
     setInterval(() => {
-      if (!state.autoplay || !state.seat) return;
+      if (!state.autoplay) return;
+      renderPlayerChrome();
+      if (!state.seat) return;
       const idx = seatIndex();
       if (idx < 0) return;
       const next = seatNextInfo(idx);
