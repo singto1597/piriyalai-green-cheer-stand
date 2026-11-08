@@ -1,0 +1,36 @@
+# เว็บ static ของสีเขียวพิริยาลัย · Cheer Stand
+#   http://100.100.225.94:8080/        (ผ่าน Tailscale)
+#   http://<public-ip>:8080/           (ถ้า firewall เปิดพอร์ตนี้)
+#
+# ใช้งาน:
+#   cd ~/ops/deploy/piriyalai-green-cheer-stand
+#   docker compose up -d          # สตาร์ท
+#   docker compose restart        # หลังแก้ nginx.conf หรือ index.html
+#   docker compose down           # ปิด
+#
+# ⚠️ index.html เป็น bind mount ไฟล์เดี่ยว → inode ถูกตรึงไว้ตอน start
+#    ถ้าแก้ด้วย editor ที่เขียนไฟล์ใหม่ (Write, vim :w) ต้อง restart ไม่งั้นเว็บเสิร์ฟของเก่า
+#    ส่วน assets/ เป็น mount โฟลเดอร์ → แก้ CSS/JS แล้วเห็นผลทันทีไม่ต้อง restart
+
+services:
+  web:
+    image: nginx:alpine
+    container_name: piriyalai_green_cheer_stand
+    restart: unless-stopped
+    ports:
+      - "0.0.0.0:8080:80"
+    volumes:
+      # เสิร์ฟเฉพาะหน้าเว็บกับ assets — ไม่เอา .git/tools/code ขึ้นเว็บ
+      - ./index.html:/usr/share/nginx/html/index.html:ro
+      - ./assets:/usr/share/nginx/html/assets:ro
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    environment:
+      TZ: Asia/Bangkok
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/"]
+      interval: 60s
+      timeout: 5s
+      retries: 3
+      start_period: 5s

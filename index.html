@@ -78,6 +78,9 @@
           <input id="quickSeat" type="text" placeholder="ค้นหาที่นั่ง E6 หรือเฟรม 12" aria-label="ค้นหาที่นั่งหรือเฟรม">
           <button type="submit">ไป</button>
         </form>
+        <button class="gear-btn" type="button" id="btnSettings" aria-label="ตั้งค่า" title="ตั้งค่า">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        </button>
       </div>
     </header>
 
@@ -146,7 +149,55 @@
                 </div>
 
                 <div class="stand-wrap" id="standWrap">
-                  <div class="stand-grid" id="standGrid" role="grid" aria-label="ผังแสตน 15 คอลัมน์ 10 แถว"></div>
+                  <div class="stand-zoom" id="standZoom">
+                    <div class="stand-grid" id="standGrid" role="grid" aria-label="ผังแสตน 15 คอลัมน์ 10 แถว"></div>
+                  </div>
+                </div>
+
+                <!-- mini player HUD (portrait phone) -->
+                <div class="mini-hud" id="miniHud">
+                  <div class="mh-info">
+                    <code id="mhCode">—</code>
+                    <span id="mhCounter">—</span>
+                  </div>
+                  <div class="mh-actions">
+                    <button class="mh-btn" type="button" id="mhPlay" aria-label="เล่นอัตโนมัติ"></button>
+                    <button class="mh-btn" type="button" id="mhExpand" aria-label="ขยายเต็มจอ">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 3H3v5M16 3h5v5M8 21H3v-5M16 21h5v-5"/></svg>
+                    </button>
+                  </div>
+                </div>
+
+                <!-- theater overlay: landscape / fullscreen -->
+                <div class="theater-ui" id="theaterUi">
+                  <div class="th-top">
+                    <button class="th-icon" type="button" id="thExit" aria-label="ย่อหน้าจอ">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+                    </button>
+                    <div class="th-ident"><code id="thCode">—</code><span id="thCounter">—</span></div>
+                    <button class="th-icon" type="button" id="thSettings" aria-label="ตั้งค่า">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                    </button>
+                  </div>
+                  <button class="th-center-play" type="button" id="thCenterPlay" aria-label="เล่นอัตโนมัติ"></button>
+                  <div class="th-bottom">
+                    <p class="th-sub" id="thSub"></p>
+                    <div class="th-track" id="thTrack" role="slider" tabindex="0" aria-label="ไทม์ไลน์เฟรม" aria-valuemin="1" aria-valuemax="86" aria-valuenow="1">
+                      <div class="th-fill" id="thFill"></div>
+                      <div class="th-knob" id="thKnob"></div>
+                    </div>
+                    <div class="th-row">
+                      <button class="th-icon" type="button" id="thPrev" aria-label="เฟรมก่อนหน้า">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+                      </button>
+                      <button class="th-icon" type="button" id="thPlay" aria-label="เล่นอัตโนมัติ"></button>
+                      <button class="th-icon" type="button" id="thNext" aria-label="เฟรมถัดไป">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+                      </button>
+                      <span class="th-time" id="thTime">—</span>
+                      <button class="th-icon th-speed" type="button" id="thSpeed" aria-label="ความเร็ว">1×</button>
+                    </div>
+                  </div>
                 </div>
 
                 <div class="stand-pan">
@@ -192,6 +243,35 @@
                 </div>
 
                 <div class="color-summary" id="colorSummary"></div>
+              </section>
+
+              <!-- personal dashboard (portrait phone) -->
+              <section class="panel my-card" id="myCard">
+                <div class="my-head">
+                  <span class="panel-title">แผงของฉัน</span>
+                  <span class="my-seat-label" id="mySeatLabel">ยังไม่เลือกที่นั่ง</span>
+                </div>
+                <form class="my-form" id="myForm" autocomplete="off">
+                  <input id="myInput" type="text" inputmode="text" maxlength="3" placeholder="รหัสที่นั่ง เช่น F5" aria-label="รหัสที่นั่งของฉัน">
+                  <button type="submit">ดูสีของฉัน</button>
+                </form>
+                <p class="my-empty" id="myEmpty">แตะที่นั่งบนผัง หรือพิมพ์รหัสที่นั่งเพื่อดูสีของคุณ</p>
+                <div class="my-body" id="myBody" hidden>
+                  <div class="my-now">
+                    <span class="my-k">สีปัจจุบันของคุณ</span>
+                    <div class="my-swatch" id="myNowSwatch"><span id="myNowName">—</span></div>
+                    <div class="my-now-meta"><code id="myNowHex">—</code><span id="myFrameLabel">—</span></div>
+                  </div>
+                  <div class="my-next">
+                    <span class="my-k">สีต่อไป</span>
+                    <span class="my-next-chip"><i id="myNextSw"></i><b id="myNextName">—</b></span>
+                    <span class="my-eta" id="myEta"></span>
+                  </div>
+                  <div class="my-lyric">
+                    <span class="my-k">เนื้อเพลงท่อนนี้</span>
+                    <p id="myLyricLine">—</p>
+                  </div>
+                </div>
               </section>
 
               <section class="panel film-card">
@@ -349,6 +429,42 @@
 </div>
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<!-- ================= SETTINGS SHEET ================= -->
+<div class="sheet-backdrop" id="sheetBackdrop" hidden></div>
+<section class="sheet" id="settingsSheet" role="dialog" aria-modal="true" aria-label="ตั้งค่า" hidden>
+  <div class="sheet-head">
+    <h2>ตั้งค่า</h2>
+    <button type="button" class="sheet-close" id="sheetClose">เสร็จ</button>
+  </div>
+  <div class="sheet-body">
+    <form class="sheet-search" id="setSearchForm" autocomplete="off">
+      <input id="setSearch" type="text" placeholder="ค้นหาที่นั่ง E6 หรือเฟรม 12" aria-label="ค้นหาที่นั่งหรือเฟรม">
+      <button type="submit">ไป</button>
+    </form>
+    <div class="sheet-row">
+      <span class="sheet-k">รหัสที่นั่ง</span>
+      <button type="button" class="sheet-switch" id="setCodes" aria-pressed="true">แสดงเมื่อซูม</button>
+    </div>
+    <div class="sheet-row">
+      <span class="sheet-k">โฟกัสที่นั่ง</span>
+      <button type="button" class="sheet-switch" id="setFocus" aria-pressed="false">ปิด</button>
+    </div>
+    <div class="sheet-row">
+      <span class="sheet-k">โหมดโรงหนัง (แนวนอน)</span>
+      <button type="button" class="sheet-switch" id="setTheater" aria-pressed="true">เปิด</button>
+    </div>
+    <div class="sheet-row">
+      <span class="sheet-k">ความเร็วเล่นอัตโนมัติ</span>
+      <button type="button" class="sheet-switch" id="setSpeed">1×</button>
+    </div>
+    <div class="sheet-grid">
+      <button type="button" class="sheet-btn" id="setZoom">พอดีจอ</button>
+      <button type="button" class="sheet-btn" id="setFull">เต็มจอ</button>
+      <button type="button" class="sheet-btn" id="setClearSeat">ล้างที่นั่ง</button>
+    </div>
+  </div>
+</section>
 
 <script src="assets/data/app-data.js"></script>
 <script src="assets/js/app.js"></script>

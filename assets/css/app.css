@@ -1230,3 +1230,323 @@ body.stage-expanded .app-main { overflow: hidden; }
   .sp-stats { display: none; }
   .astep { grid-template-columns: 38px minmax(0, 1fr) 62px; }
 }
+
+/* ============================================================
+   MOBILE PLAYER — "โค้ดสีแบบดูวิดีโอ"
+   portrait = mini player + แผงของฉัน · landscape = theater mode
+   ============================================================ */
+.gear-btn {
+  display: none; flex: 0 0 auto;
+  width: 34px; height: 34px; padding: 0;
+  border: 1px solid transparent; border-radius: 50%;
+  background: transparent; color: var(--text-2);
+  align-items: center; justify-content: center;
+}
+.gear-btn:hover { background: var(--hover); color: var(--text); }
+.gear-btn svg { width: 18px; height: 18px; }
+
+.stage-card { position: relative; }
+.stand-zoom { display: block; transform-origin: center center; will-change: transform; }
+
+/* ป้ายรหัสที่นั่ง: อ่านง่ายขึ้น + สีตัดกับพื้นคำนวณจาก JS */
+.seat-cell .slabel { opacity: .92; font-weight: 500; }
+
+.mini-hud, .theater-ui, .my-card { display: none; }
+
+/* ---------- mini player HUD ---------- */
+.mini-hud {
+  position: absolute; left: 0; right: 0; bottom: 0; z-index: 4;
+  align-items: center; gap: 8px;
+  padding: 26px 10px 8px;
+  background: linear-gradient(to top, rgba(0, 0, 0, .74), rgba(0, 0, 0, 0));
+  color: #fff;
+}
+.mh-info { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.15; }
+.mh-info code { font-family: var(--mono); font-size: 11px; color: #fff; letter-spacing: .03em; }
+.mh-info span { font-size: 9.5px; color: rgba(255, 255, 255, .72); }
+.mh-actions { display: flex; gap: 4px; }
+.mh-btn {
+  width: 38px; height: 38px; padding: 0;
+  border: 0; border-radius: 50%;
+  background: rgba(255, 255, 255, .16); color: #fff;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.mh-btn svg { width: 18px; height: 18px; }
+.mh-btn:active { background: rgba(255, 255, 255, .3); }
+
+/* ---------- theater overlay ---------- */
+.theater-ui {
+  position: absolute; inset: 0; z-index: 6;
+  flex-direction: column; justify-content: space-between;
+  pointer-events: none; opacity: 1;
+  transition: opacity .22s var(--ease);
+}
+.th-top {
+  display: flex; align-items: center; gap: 8px;
+  padding: calc(8px + env(safe-area-inset-top)) 10px 26px;
+  background: linear-gradient(to bottom, rgba(0, 0, 0, .8), rgba(0, 0, 0, 0));
+  pointer-events: none;
+}
+.th-ident { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.2; }
+.th-ident code { font-family: var(--mono); font-size: 11px; color: #fff; letter-spacing: .04em; }
+.th-ident span { font-size: 10px; color: rgba(255, 255, 255, .72); }
+.th-icon {
+  width: 42px; height: 42px; padding: 0; flex: 0 0 auto;
+  display: inline-flex; align-items: center; justify-content: center;
+  border: 0; border-radius: 50%;
+  background: transparent; color: #fff;
+}
+.th-icon svg { width: 22px; height: 22px; }
+/* gradient bars ปล่อยผ่านการแตะ แต่ปุ่มต้องรับ event เอง */
+.th-icon, .th-speed, .th-center-play { pointer-events: auto; }
+.th-icon:active { background: rgba(255, 255, 255, .16); }
+.th-speed {
+  width: auto; height: 32px; padding: 0 10px; border-radius: 16px;
+  background: rgba(255, 255, 255, .14);
+  font-family: var(--mono); font-size: 12px;
+}
+.th-center-play {
+  position: absolute; left: 50%; top: 50%;
+  transform: translate(-50%, -50%);
+  width: 66px; height: 66px; padding: 0;
+  border: 0; border-radius: 50%;
+  background: rgba(0, 0, 0, .5); color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  -webkit-backdrop-filter: blur(2px); backdrop-filter: blur(2px);
+}
+.th-center-play svg { width: 30px; height: 30px; }
+body.is-playing .th-center-play { display: none; }
+.th-bottom {
+  padding: 34px 12px calc(6px + env(safe-area-inset-bottom));
+  background: linear-gradient(to top, rgba(0, 0, 0, .88), rgba(0, 0, 0, .45) 55%, rgba(0, 0, 0, 0));
+  pointer-events: none;
+}
+.th-sub {
+  margin: 0 auto 4px; max-width: 92%; width: fit-content;
+  padding: 2px 10px; border-radius: 6px;
+  background: rgba(0, 0, 0, .34);
+  -webkit-backdrop-filter: blur(2px); backdrop-filter: blur(2px);
+  text-align: center; font-size: clamp(13px, 2.6vw, 18px); line-height: 1.4;
+  color: #fff; overflow-wrap: anywhere;
+  text-shadow: 0 1px 2px #000, 0 0 6px rgba(0, 0, 0, .9);
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.th-sub.is-empty { opacity: 0; }
+.th-sub .lyric-hl { text-shadow: none; }
+.th-track {
+  position: relative; height: 4px; margin: 10px 4px 4px;
+  border-radius: 3px; background: rgba(255, 255, 255, .3);
+  pointer-events: auto; touch-action: none; cursor: pointer;
+}
+.th-track::before { content: ""; position: absolute; inset: -16px 0; }
+.th-fill { position: absolute; top: 0; bottom: 0; left: 0; width: 0; border-radius: 3px; background: #ff2d55; }
+.th-knob {
+  position: absolute; top: 50%; left: 0; width: 14px; height: 14px;
+  border-radius: 50%; background: #ff2d55;
+  transform: translate(-50%, -50%);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, .5);
+}
+.th-row {
+  display: flex; align-items: center; gap: 2px;
+  margin-top: 4px; color: #fff;
+}
+.th-row .th-icon { width: 44px; height: 40px; }
+.th-time {
+  margin-left: auto; padding-right: 8px;
+  font-family: var(--mono); font-size: 10.5px; color: rgba(255, 255, 255, .78);
+}
+body.controls-hidden .theater-ui { opacity: 0; pointer-events: none; }
+body.controls-hidden .theater-ui .th-icon,
+body.controls-hidden .theater-ui .th-speed,
+body.controls-hidden .theater-ui .th-center-play { pointer-events: none; }
+
+/* ---------- ผังใน theater / fullscreen ---------- */
+body.player-mode .stand-wrap { flex: 1 1 auto; min-height: 0; padding: 0; }
+body.player-mode .mini-hud { display: none !important; }
+body.player-mode .theater-ui { display: flex; }
+body.player-mode .stand-grid { width: min(calc(100vw - 8px), calc(100dvh * 1.5 - 10px)); min-width: 0; }
+body.player-mode .stage-card { background: #000; }
+
+/* ---------- แผงของฉัน ---------- */
+.my-card { padding: 12px; margin-top: 8px; }
+.my-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
+.my-seat-label { font-family: var(--mono); font-size: 11px; color: var(--text-2); }
+.my-form { display: flex; gap: 6px; }
+.my-form input {
+  flex: 1; min-width: 0; height: 44px; padding: 0 12px;
+  border: 1px solid var(--line); border-radius: 8px;
+  background: var(--bg); color: var(--text);
+  font-size: 16px; text-transform: uppercase;
+}
+.my-form input::placeholder { text-transform: none; color: var(--text-3); font-size: 13px; }
+.my-form button {
+  height: 44px; padding: 0 15px; border: 0; border-radius: 8px;
+  background: var(--white); color: var(--bg); font-size: 13px; font-weight: 500;
+}
+.my-empty { margin: 10px 2px 0; font-size: 11.5px; color: var(--text-3); }
+.my-body { margin-top: 12px; }
+.my-k { display: block; font-size: 10px; letter-spacing: .02em; color: var(--text-3); }
+.my-swatch {
+  margin-top: 6px; min-height: clamp(104px, 17dvh, 190px);
+  border-radius: 10px; padding: 18px;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .08);
+  transition: background-color .18s;
+}
+.my-swatch span { font-size: clamp(22px, 7vw, 34px); font-weight: 600; line-height: 1.25; text-align: center; }
+.my-now-meta { display: flex; justify-content: space-between; gap: 10px; margin-top: 6px; font-family: var(--mono); font-size: 10px; color: var(--text-3); }
+.my-next { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin-top: 12px; }
+.my-next .my-k { flex: 0 0 100%; margin-bottom: -4px; }
+.my-next-chip { display: inline-flex; align-items: center; gap: 7px; font-size: 13px; color: var(--text); }
+.my-next-chip i { display: block; width: 18px; height: 18px; border-radius: 4px; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .2); }
+.my-eta { margin-left: auto; font-family: var(--mono); font-size: 10.5px; color: var(--team); text-align: right; }
+.my-lyric { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--line); }
+.my-lyric p { margin: 6px 0 0; font-size: 16px; line-height: 1.5; color: var(--text); }
+.my-lyric .lyric-hl { font-weight: 500; }
+.my-card.is-empty .my-body { display: none; }
+.my-card:not(.is-empty) .my-empty { display: none; }
+
+/* ---------- settings sheet ---------- */
+.sheet-backdrop { position: fixed; inset: 0; background: rgba(0, 0, 0, .58); z-index: 400; }
+.sheet {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 401;
+  max-height: 82dvh; overflow-y: auto;
+  padding: 6px 16px calc(16px + env(safe-area-inset-bottom));
+  background: var(--panel); border-top: 1px solid var(--line-2);
+  border-radius: 16px 16px 0 0;
+  box-shadow: 0 -12px 40px rgba(0, 0, 0, .5);
+}
+.sheet-head { display: flex; align-items: center; justify-content: space-between; padding: 10px 0 6px; }
+.sheet-head h2 { margin: 0; font-size: 15px; font-weight: 500; }
+.sheet-close { border: 0; background: transparent; color: var(--text-2); font-size: 13px; padding: 6px 0; }
+.sheet-search { display: flex; gap: 6px; margin: 6px 0 10px; }
+.sheet-search input {
+  flex: 1; min-width: 0; height: 44px; padding: 0 12px;
+  border: 1px solid var(--line); border-radius: 8px;
+  background: var(--bg); color: var(--text); font-size: 15px;
+}
+.sheet-search button, .sheet-btn {
+  height: 44px; padding: 0 15px;
+  border: 1px solid var(--line-2); border-radius: 8px;
+  background: var(--hover); color: var(--text); font-size: 12.5px;
+}
+.sheet-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 13px 0; border-top: 1px solid var(--line);
+}
+.sheet-k { font-size: 13px; color: var(--text-2); }
+.sheet-switch {
+  min-width: 92px; height: 34px; padding: 0 12px;
+  border: 1px solid var(--line-2); border-radius: 17px;
+  background: var(--hover); color: var(--text-3);
+  font-size: 11.5px; white-space: nowrap;
+}
+.sheet-switch[aria-pressed="true"] { background: var(--team); border-color: var(--team); color: #fff; }
+.sheet-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 16px; }
+.sheet-grid .sheet-btn { padding: 0 6px; }
+body.sheet-open { overflow: hidden; }
+
+/* แนวนอน (theater) จอเตี้ย — ย่อระยะให้เห็นตัวเลือกครบโดยไม่ต้องเลื่อนมาก */
+body.theater .sheet { max-height: 94dvh; padding-top: 2px; }
+body.theater .sheet-head { padding: 6px 0 2px; }
+body.theater .sheet-search { margin: 4px 0 6px; }
+body.theater .sheet-search input,
+body.theater .sheet-search button { height: 38px; }
+body.theater .sheet-row { padding: 9px 0; }
+body.theater .sheet-grid { margin-top: 10px; }
+
+/* ============================================================
+   MOBILE LAYOUT
+   ============================================================ */
+@media (max-width: 900px) {
+  .gear-btn { display: inline-flex; margin-left: auto; }
+  .app-search { display: none; }
+  .ah-sub { display: none; }
+  .footer { display: none; }
+
+  .song-rail { margin-bottom: 6px; }
+  .song-tab { padding: 5px 8px; }
+  .st-sub { display: none; }
+  .st-title { max-width: 118px; }
+
+  /* player bar ยุบ — ใช้ mini HUD / theater แทน */
+  .player-bar { display: none !important; }
+  .stand-side { display: none !important; }
+  .stand-pan, .fs-nav, .stage-label.bottom, .color-summary,
+  .lyric-strip, .focus-banner, .zoom-only { display: none !important; }
+  .stage-head { display: none; }
+  .stage-card { border-radius: 10px; background: #000; }
+  .stand-wrap {
+    padding: 6px 6px 48px; overflow: hidden;
+    background: #000; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    user-select: none; -webkit-user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: pan-y;
+  }
+  body.player-mode .stand-wrap { touch-action: none; }
+  .stand-zoom { width: 100%; display: flex; justify-content: center; }
+  .stand-grid { width: min(100%, calc(34dvh * 1.5)); min-width: 0; margin: 0 auto; }
+
+  .mini-hud { display: flex; }
+  .my-card { display: block; order: 3; }
+  .film-card { margin-top: 8px; }
+
+  /* semantic zoom — ซูมออกซ่อนรหัส ซูมเข้าโชว์ */
+  .stage-card.labels-off .seat-cell .slabel { opacity: 0; }
+
+  .seat-cell { border-radius: 2.5px; }
+  .seat-cell.selected { outline-width: 2px; }
+}
+
+/* แนวนอนบนมือถือ → theater อัตโนมัติ (JS ใส่ body.theater) */
+body.theater { overflow: hidden; }
+body.theater .app-main { overflow: hidden; }
+body.theater .content { max-width: none; padding: 0; }
+body.theater .app-header,
+body.theater .sidebar,
+body.theater .bottom-nav,
+body.theater .song-rail,
+body.theater .player-bar,
+body.theater .film-card,
+body.theater .stand-side,
+body.theater #myCard,
+body.theater .footer { display: none !important; }
+body.theater #stageCard {
+  position: fixed; inset: 0; z-index: 200;
+  width: 100vw; height: 100dvh; max-width: none; margin: 0;
+  border: 0; border-radius: 0; background: #000;
+  display: flex; flex-direction: column;
+}
+body.theater .stand-wrap { flex: 1 1 auto; min-height: 0; }
+
+/* fullscreen บนมือถือ → ใช้ overlay เดียวกัน */
+@media (max-width: 900px) {
+  #stageCard:fullscreen .panel-head,
+  #stageCard.expanded .panel-head { display: none !important; }
+  #stageCard:fullscreen .lyric-strip,
+  #stageCard.expanded .lyric-strip,
+  #stageCard:fullscreen .color-summary,
+  #stageCard.expanded .color-summary,
+  #stageCard:fullscreen .stand-pan,
+  #stageCard.expanded .stand-pan,
+  #stageCard:fullscreen .fs-nav,
+  #stageCard.expanded .fs-nav,
+  #stageCard:fullscreen .stage-label.bottom,
+  #stageCard.expanded .stage-label.bottom { display: none !important; }
+  #stageCard:fullscreen .stand-wrap,
+  #stageCard.expanded .stand-wrap { padding: 0; }
+}
+
+@media (max-width: 900px) {
+  .stage-card.zoom-active .stand-wrap { touch-action: none; }
+  /* fullscreen บนมือถือ: ให้ผังใช้พื้นที่เต็มเหมือน theater */
+  #stageCard:fullscreen .stand-grid,
+  #stageCard.expanded .stand-grid {
+    width: min(calc(100vw - 8px), calc(100dvh * 1.5 - 10px)) !important;
+    min-width: 0 !important;
+  }
+  #stageCard:fullscreen .stand-wrap,
+  #stageCard.expanded .stand-wrap { overflow: hidden; }
+  body.player-mode .stand-wrap { border-radius: 0; }
+}

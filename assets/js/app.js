@@ -268,6 +268,23 @@
     return e ? { id: e.pageId, step: e.stepIndex || 0 } : null;
   }
 
+  /* ---------- contrast ----------
+     ตัวอักษรบนช่องสี: พื้นสว่าง (ขาว เหลือง เขียวอ่อน ฟ้า) ใช้ตัวดำ,
+     พื้นเข้ม (แดง น้ำเงิน ม่วง ดำ) ใช้ตัวขาว — ตามที่เจ้าของงานขอ */
+  function srgbLin(v) {
+    const c = v / 255;
+    return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+  }
+  function luminance(hex) {
+    const n = parseInt(hex.slice(1), 16);
+    return 0.2126 * srgbLin((n >> 16) & 255)
+      + 0.7152 * srgbLin((n >> 8) & 255)
+      + 0.0722 * srgbLin(n & 255);
+  }
+  function readableText(hex) {
+    return luminance(hex) > 0.28 ? '#0b0f16' : '#ffffff';
+  }
+
   /* ---------- state ---------- */
   const SPEEDS = [{ ms: 1500, label: '0.6×' }, { ms: 950, label: '1×' }, { ms: 550, label: '1.8×' }];
   const state = {
@@ -287,6 +304,9 @@
     standZoom: false,
     zoomBeforeFull: false,
     fsSession: false,
+    theaterOff: false,
+    codesOn: true,
+    nextAdvanceAt: 0,
   };
 
   const seatIndex = () => (state.seat ? SEAT_INDEX.get(state.seat) : -1);
@@ -369,6 +389,7 @@
     }
     renderSongTabs();
     renderCurrentView();
+    updatePlayerMode();
     updateHash();
   }
 
@@ -403,22 +424,35 @@
   /* ---------- autoplay ---------- */
   let autoTimer = null;
   function updatePlayBtn() {
-    const btn = $('#btnPlay');
-    if (!btn) return;
-    btn.innerHTML = state.autoplay ? ICONS.pause : ICONS.play;
-    btn.setAttribute('aria-label', state.autoplay ? 'หยุดเล่นอัตโนมัติ' : 'เล่นอัตโนมัติ');
+    const icon = state.autoplay ? ICONS.pause : ICONS.play;
+    const label = state.autoplay ? 'หยุดเล่นอัตโนมัติ' : 'เล่นอัตโนมัติ';
+    ['#btnPlay', '#mhPlay', '#thPlay', '#thCenterPlay'].forEach((sel) => {
+      const btn = $(sel);
+      if (!btn) return;
+      btn.innerHTML = icon;
+      btn.setAttribute('aria-label', label);
+    });
+    document.body.classList.toggle('is-playing', state.autoplay);
   }
   function stopAuto() {
     state.autoplay = false;
+    state.nextAdvanceAt = 0;
     if (autoTimer) clearInterval(autoTimer);
     autoTimer = null;
     updatePlayBtn();
+    renderMyCard();
   }
   function startAuto() {
     stopAuto();
     state.autoplay = true;
-    autoTimer = setInterval(next, SPEEDS[state.speedIdx].ms);
+    const ms = SPEEDS[state.speedIdx].ms;
+    state.nextAdvanceAt = Date.now() + ms;
+    autoTimer = setInterval(() => {
+      state.nextAdvanceAt = Date.now() + ms;
+      next();
+    }, ms);
     updatePlayBtn();
+    renderMyCard();
   }
   function toggleAuto() {
     if (state.autoplay) stopAuto();
@@ -479,7 +513,7 @@
       const seatDim = state.focusSeat && seatIdx >= 0 && k !== seatIdx;
       if (seatDim || (focusColor && hex !== focusColor)) cls += ' dimmed';
       el.className = cls;
-      el.style.color = p === 0 ? 'rgba(15,23,42,.55)' : meta.text;
+      el.style.color = p === 0 ? 'rgba(11,15,22,.62)' : readableText(hex);
       el.setAttribute('aria-label', `ที่นั่ง ${SEATS[k]} สี${meta.short}`);
       el.title = `${SEATS[k]} · ${meta.name}`;
     }
@@ -512,6 +546,34 @@
     $('#btnPlay').innerHTML = state.autoplay ? ICONS.pause : ICONS.play;
     updatePlayBtn();
     updateRail('stepPills');
+    renderPlayerChrome();
+  }
+
+  /* ---------- player chrome (mini HUD + theater overlay) ---------- */
+  function renderPlayerChrome() {
+    const st = curStep();
+    const total = flat.length;
+    const pct = ((st.gi + 1) / total) * 100;
+    const codeEls = [$('#mhCode'), $('#thCode')];
+    codeEls.forEach((el) => { if (el) el.textContent = st.code; });
+    const ticker = `เฟรม ${st.gi + 1} / ${total}`;
+    const counters = [
+      $('#mhCounter'), $('#thCounter'), $('#thTime'),
+    ];
+    counters.forEach((el) => { if (el) el.textContent = ticker; });
+    const fill = $('#thFill');
+    if (fill) fill.style.width = pct + '%';
+    const knob = $('#thKnob');
+    if (knob) knob.style.left = pct + '%';
+    const track = $('#thTrack');
+    if (track) {
+      track.setAttribute('aria-valuemax', String(total));
+      track.setAttribute('aria-valuenow', String(st.gi + 1));
+    }
+    const speed = $('#thSpeed');
+    if (speed) speed.textContent = SPEEDS[state.speedIdx].label;
+    const frameLabel = $('#myFrameLabel');
+    if (frameLabel) frameLabel.textContent = `${st.code} · เฟรม ${st.gi + 1}/${total}`;
   }
 
   function lyricAccent(st) {
@@ -567,10 +629,86 @@
     const line = valid ? song.lyrics[li] : '';
     $('#lyricCode').textContent = st.code;
     $('#lyricCount').textContent = valid ? `ท่อน ${li + 1}/${song.lyrics.length}` : '';
+    const html = valid ? lyricHTML(line, LYRIC_HIGHLIGHT[st.code] || [], lyricAccent(st)) : '';
     const lineEl = $('#lyricLine');
-    lineEl.innerHTML = valid ? lyricHTML(line, LYRIC_HIGHLIGHT[st.code] || [], lyricAccent(st)) : '— เฟรมแทรก ไม่มีคำร้อง —';
+    lineEl.innerHTML = html || '— เฟรมแทรก ไม่มีคำร้อง —';
     lineEl.classList.toggle('is-empty', !valid);
     $('#lyricCue').textContent = st.cue || '—';
+    /* subtitle ใน theater + เนื้อเพลงในการ์ดของฉัน */
+    const sub = $('#thSub');
+    if (sub) {
+      sub.innerHTML = html;
+      sub.classList.toggle('is-empty', !valid);
+    }
+    const mine = $('#myLyricLine');
+    if (mine) mine.innerHTML = html || '— เฟรมแทรก ไม่มีคำร้อง —';
+  }
+
+  /* ---------- แผงของฉัน (portrait) ---------- */
+  function seatNextInfo(idx) {
+    const st = curStep();
+    const hex = st.colors[idx];
+    for (let gi = st.gi + 1; gi < flat.length; gi += 1) {
+      const h = flat[gi].colors[idx];
+      if (h !== hex) return { hex: h, frames: gi - st.gi };
+    }
+    return null;
+  }
+
+  function updateMyEta(next) {
+    const el = $('#myEta');
+    if (!el) return;
+    if (!next) { el.textContent = ''; return; }
+    if (!state.autoplay) {
+      el.textContent = next.frames === 1 ? 'เปลี่ยนเฟรมถัดไป' : `อีก ${next.frames} เฟรม`;
+      return;
+    }
+    const ms = SPEEDS[state.speedIdx].ms;
+    const remain = state.nextAdvanceAt ? Math.max(0, state.nextAdvanceAt - Date.now()) : ms;
+    const sec = ((next.frames - 1) * ms + remain) / 1000;
+    el.textContent = sec < 0.35
+      ? 'กำลังจะเปลี่ยน'
+      : `เปลี่ยนในอีก ${sec < 10 ? sec.toFixed(1) : Math.round(sec)} วินาที`;
+  }
+
+  function renderMyCard() {
+    const body = $('#myBody');
+    if (!body) return;
+    const card = $('#myCard');
+    const label = $('#mySeatLabel');
+    const idx = seatIndex();
+    if (idx < 0) {
+      card.classList.add('is-empty');
+      body.hidden = true;
+      if (label) label.textContent = 'ยังไม่เลือกที่นั่ง';
+      return;
+    }
+    card.classList.remove('is-empty');
+    body.hidden = false;
+    const st = curStep();
+    const hex = st.colors[idx];
+    if (label) label.textContent = state.seat;
+    const sw = $('#myNowSwatch');
+    if (sw) {
+      sw.style.backgroundColor = hex;
+      sw.style.color = readableText(hex);
+    }
+    $('#myNowName').textContent = hex === '#ffffff' ? 'ขาว' : A.colors[hex].name;
+    $('#myNowHex').textContent = hex.toUpperCase();
+    const input = $('#myInput');
+    if (input && document.activeElement !== input) input.value = state.seat;
+    const next = seatNextInfo(idx);
+    const nextSw = $('#myNextSw');
+    if (!next) {
+      nextSw.style.backgroundColor = 'transparent';
+      $('#myNextName').textContent = 'ไม่มีอีกแล้ว';
+      $('#myEta').textContent = '';
+    } else {
+      nextSw.style.backgroundColor = next.hex;
+      $('#myNextName').textContent = next.hex === '#ffffff' ? 'ขาว' : A.colors[next.hex].name;
+      updateMyEta(next);
+    }
+    renderPlayerChrome();
   }
 
   function renderColorSummary() {
@@ -780,6 +918,7 @@
     renderFilmstrip();
     renderInspector();
     renderTimeline();
+    renderMyCard();
     updateFocusBanner();
     requestAnimationFrame(() => updateRail('standWrap'));
   }
@@ -792,6 +931,7 @@
       renderInspector();
       renderTimeline();
       renderFilmstrip();
+      renderMyCard();
       updateFocusBanner();
     } else if (state.view === 'gallery') {
       renderGallery();
@@ -1286,16 +1426,13 @@
     requestAnimationFrame(() => updateRail('standWrap'));
   }
 
-  function enterExpanded(keepZoom) {
+  function enterExpanded() {
     const card = $('#stageCard');
     if (!card) return;
-    if (!keepZoom) {
-      state.zoomBeforeFull = state.standZoom;
-      setZoom(window.matchMedia('(max-width: 900px)').matches);
-    }
     card.classList.add('expanded');
     document.body.classList.add('stage-expanded');
     syncFullBtn();
+    updatePlayerMode();
   }
 
   function exitStageFullscreen() {
@@ -1306,10 +1443,10 @@
     const card = $('#stageCard');
     if (card) card.classList.remove('expanded');
     document.body.classList.remove('stage-expanded');
-    if (state.fsSession) setZoom(Boolean(state.zoomBeforeFull));
     state.fsSession = false;
     state.zoomBeforeFull = false;
     syncFullBtn();
+    updatePlayerMode();
   }
 
   function toggleFull() {
@@ -1323,25 +1460,24 @@
       exitStageFullscreen();
       return;
     }
-    state.zoomBeforeFull = state.standZoom;
     state.fsSession = true;
-    setZoom(window.matchMedia('(max-width: 900px)').matches);
     const attempt = ++fullAttempt;
     if (card.requestFullscreen) {
       try {
-        card.requestFullscreen().catch(() => { if (attempt === fullAttempt) enterExpanded(true); });
+        card.requestFullscreen().catch(() => { if (attempt === fullAttempt) enterExpanded(); });
         setTimeout(() => {
           if (attempt === fullAttempt && !document.fullscreenElement && !card.classList.contains('expanded')) {
-            enterExpanded(true);
+            enterExpanded();
           }
         }, 700);
       } catch (e) {
-        enterExpanded(true);
+        enterExpanded();
       }
     } else {
-      enterExpanded(true);
+      enterExpanded();
     }
     syncFullBtn();
+    updatePlayerMode();
   }
 
   /* ---------- rail scrollers ---------- */
@@ -1384,6 +1520,429 @@
     });
   }
 
+  /* ---------- mobile player: theater + gestures + sheet ---------- */
+  const mqTheater = window.matchMedia('(orientation: landscape) and (max-height: 600px)');
+  const mqMobile = window.matchMedia('(max-width: 900px)');
+  let zoomScale = 1;
+  let panX = 0;
+  let panY = 0;
+  let hideTimer = 0;
+  let sheetOpen = false;
+  let gestureSuppressUntil = 0;
+
+  function inPlayerMode() {
+    return document.body.classList.contains('player-mode');
+  }
+
+  function updatePlayerMode() {
+    const full = isStageFull();
+    const theater = state.view === 'stand' && !state.theaterOff && !full && mqTheater.matches;
+    document.body.classList.toggle('theater', theater);
+    const player = full || theater;
+    document.body.classList.toggle('player-mode', player);
+    if (player) {
+      pokePlayer();
+    } else {
+      clearTimeout(hideTimer);
+      document.body.classList.remove('controls-hidden');
+    }
+    applyZoom();
+    syncFullBtn();
+  }
+
+  function pokePlayer() {
+    if (!inPlayerMode()) return;
+    document.body.classList.remove('controls-hidden');
+    clearTimeout(hideTimer);
+    hideTimer = setTimeout(() => {
+      if (inPlayerMode() && !sheetOpen) document.body.classList.add('controls-hidden');
+    }, 3000);
+  }
+
+  /* ---------- zoom ---------- */
+  function applyZoom() {
+    const el = $('#standZoom');
+    if (!el) return;
+    el.style.transform = (zoomScale === 1 && !panX && !panY)
+      ? '' : `translate3d(${panX}px, ${panY}px, 0) scale(${zoomScale})`;
+    const card = $('#stageCard');
+    if (card) {
+      card.classList.toggle('zoom-active', zoomScale > 1.01);
+      card.classList.toggle('labels-off', !state.codesOn || zoomScale < 1.28);
+    }
+    const zoomBtn = $('#setZoom');
+    if (zoomBtn) zoomBtn.textContent = zoomScale > 1.01 ? 'พอดีจอ' : 'ขยาย';
+  }
+
+  function resetZoom() {
+    zoomScale = 1;
+    panX = 0;
+    panY = 0;
+    applyZoom();
+  }
+
+  function toggleZoom(px, py) {
+    const wrap = $('#standWrap');
+    if (!wrap) return;
+    if (zoomScale > 1.2) { resetZoom(); return; }
+    const r = wrap.getBoundingClientRect();
+    const ax = (px == null ? r.left + r.width / 2 : px) - (r.left + r.width / 2);
+    const ay = (py == null ? r.top + r.height / 2 : py) - (r.top + r.height / 2);
+    const s = 2.3;
+    zoomScale = s;
+    panX = ax * (1 - s);
+    panY = ay * (1 - s);
+    clampPan();
+    applyZoom();
+  }
+
+  function clampPan() {
+    const wrap = $('#standWrap');
+    if (!wrap) return;
+    const r = wrap.getBoundingClientRect();
+    const mx = Math.max(0, (r.width * (zoomScale - 1)) / 2);
+    const my = Math.max(0, (r.height * (zoomScale - 1)) / 2);
+    panX = Math.max(-mx, Math.min(mx, panX));
+    panY = Math.max(-my, Math.min(my, panY));
+  }
+
+  function jumpBy(n) {
+    const target = curStep().gi + n;
+    if (target < 0 || target >= flat.length) return;
+    goGlobal(target);
+    showToast(n > 0 ? `ข้ามไป ${n} เฟรม` : `ย้อนไป ${Math.abs(n)} เฟรม`);
+  }
+
+  function doubleTap(px, py) {
+    const wrap = $('#standWrap');
+    if (!wrap) return;
+    const r = wrap.getBoundingClientRect();
+    const rx = (px - r.left) / Math.max(1, r.width);
+    if (inPlayerMode()) {
+      if (rx < 0.28) { jumpBy(-10); return; }
+      if (rx > 0.72) { jumpBy(10); return; }
+    }
+    toggleZoom(px, py);
+  }
+
+  function wireGestures() {
+    const wrap = $('#standWrap');
+    if (!wrap) return;
+    const pointers = new Map();
+    let mode = null;
+    let startX = 0;
+    let startY = 0;
+    let startT = 0;
+    let lastX = 0;
+    let lastY = 0;
+    let baseX = 0;
+    let baseY = 0;
+    let pinch = null;
+    let moved = false;
+    let lastTap = 0;
+    let lastTapX = 0;
+    let lastTapY = 0;
+
+    const avg = () => {
+      let x = 0;
+      let y = 0;
+      pointers.forEach((p) => { x += p.x; y += p.y; });
+      return { x: x / pointers.size, y: y / pointers.size };
+    };
+    const dist = () => {
+      const pts = Array.from(pointers.values());
+      if (pts.length < 2) return 0;
+      return Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
+    };
+
+    wrap.addEventListener('pointerdown', (e) => {
+      if (!mqMobile.matches) return;
+      if (e.target.closest('button, input')) return;
+      pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      if (pointers.size === 1) {
+        mode = zoomScale > 1.01 ? 'pan' : 'swipe';
+        startX = lastX = e.clientX;
+        startY = lastY = e.clientY;
+        startT = Date.now();
+        baseX = panX;
+        baseY = panY;
+        moved = false;
+        try { wrap.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
+      } else if (pointers.size === 2) {
+        mode = 'pinch';
+        pinch = { d: dist() || 1, scale: zoomScale, mid: avg(), baseX: panX, baseY: panY };
+        moved = true;
+      }
+      pokePlayer();
+    });
+
+    wrap.addEventListener('pointermove', (e) => {
+      const p = pointers.get(e.pointerId);
+      if (!p) return;
+      p.x = e.clientX;
+      p.y = e.clientY;
+      if (mode === 'pinch' && pointers.size >= 2 && pinch) {
+        e.preventDefault();
+        const scale = Math.max(1, Math.min(4, pinch.scale * (dist() / pinch.d)));
+        const mid = avg();
+        const r = wrap.getBoundingClientRect();
+        const ax = mid.x - (r.left + r.width / 2);
+        const ay = mid.y - (r.top + r.height / 2);
+        const k = scale / pinch.scale;
+        zoomScale = scale;
+        panX = ax - k * (ax - pinch.baseX);
+        panY = ay - k * (ay - pinch.baseY);
+        clampPan();
+        applyZoom();
+        return;
+      }
+      const dx = e.clientX - lastX;
+      const dy = e.clientY - lastY;
+      lastX = e.clientX;
+      lastY = e.clientY;
+      if (mode === 'pan') {
+        panX += dx;
+        panY += dy;
+        clampPan();
+        applyZoom();
+      }
+      if (Math.abs(e.clientX - startX) > 8 || Math.abs(e.clientY - startY) > 8) moved = true;
+    });
+
+    function end(e) {
+      if (!pointers.has(e.pointerId)) return;
+      const wasPinch = mode === 'pinch';
+      pointers.delete(e.pointerId);
+      if (pointers.size === 1) {
+        const p = Array.from(pointers.values())[0];
+        mode = zoomScale > 1.01 ? 'pan' : 'swipe';
+        startX = lastX = p.x;
+        startY = lastY = p.y;
+        startT = Date.now();
+        pinch = null;
+        return;
+      }
+      if (pointers.size > 0) return;
+      const dx = lastX - startX;
+      const dy = lastY - startY;
+      const dt = Date.now() - startT;
+      pinch = null;
+      if (wasPinch) {
+        if (zoomScale < 1.06) resetZoom();
+        mode = null;
+        pokePlayer();
+        return;
+      }
+      if (mode === 'swipe' && Math.abs(dx) > 44 && Math.abs(dx) > Math.abs(dy) * 1.25) {
+        gestureSuppressUntil = Date.now() + 450;
+        if (dx < 0) next();
+        else prev();
+      } else if (!moved && dt < 320) {
+        const now = Date.now();
+        if (now - lastTap < 330 && Math.hypot(lastX - lastTapX, lastY - lastTapY) < 44) {
+          doubleTap(lastX, lastY);
+          lastTap = 0;
+        } else {
+          lastTap = now;
+          lastTapX = lastX;
+          lastTapY = lastY;
+        }
+      }
+      mode = null;
+      pokePlayer();
+    }
+    wrap.addEventListener('pointerup', end);
+    wrap.addEventListener('pointercancel', end);
+  }
+
+  /* ---------- timeline scrub (theater) ---------- */
+  function goFast(gi) {
+    const n = flat.length;
+    const st = flat[((gi % n) + n) % n];
+    state.si = st.si;
+    state.step = st.i;
+    paintStage();
+    renderPlayerChrome();
+    renderLyric();
+    renderMyCard();
+  }
+
+  function wireScrubber() {
+    const track = $('#thTrack');
+    if (!track) return;
+    let dragging = false;
+    let pending = 0;
+    const frameAt = (clientX) => {
+      const r = track.getBoundingClientRect();
+      const t = Math.max(0, Math.min(1, (clientX - r.left) / Math.max(1, r.width)));
+      return Math.round(t * (flat.length - 1));
+    };
+    const preview = (clientX) => goFast(frameAt(clientX));
+    track.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      dragging = true;
+      pokePlayer();
+      try { track.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
+      preview(e.clientX);
+    });
+    track.addEventListener('pointermove', (e) => {
+      if (!dragging || pending) return;
+      pending = requestAnimationFrame(() => {
+        pending = 0;
+        if (dragging) preview(e.clientX);
+      });
+    });
+    const stop = () => {
+      if (!dragging) return;
+      dragging = false;
+      renderStandAll();
+      updateHash();
+    };
+    track.addEventListener('pointerup', stop);
+    track.addEventListener('pointercancel', stop);
+    track.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowRight') { e.preventDefault(); next(); }
+      else if (e.key === 'ArrowLeft') { e.preventDefault(); prev(); }
+      pokePlayer();
+    });
+  }
+
+  function cycleSpeed() {
+    state.speedIdx = (state.speedIdx + 1) % SPEEDS.length;
+    const btn = $('#btnSpeed');
+    if (btn) btn.textContent = SPEEDS[state.speedIdx].label;
+    const th = $('#thSpeed');
+    if (th) th.textContent = SPEEDS[state.speedIdx].label;
+    const set = $('#setSpeed');
+    if (set) set.textContent = SPEEDS[state.speedIdx].label;
+    if (state.autoplay) startAuto();
+    else renderMyCard();
+    showToast('ความเร็วเล่นอัตโนมัติ <b>' + SPEEDS[state.speedIdx].label + '</b>');
+  }
+
+  /* ---------- settings sheet ---------- */
+  function syncSheet() {
+    const codes = $('#setCodes');
+    if (codes) {
+      codes.setAttribute('aria-pressed', String(state.codesOn));
+      codes.textContent = state.codesOn ? 'แสดงเมื่อซูม' : 'ซ่อน';
+    }
+    const focus = $('#setFocus');
+    if (focus) {
+      focus.setAttribute('aria-pressed', String(state.focusSeat));
+      focus.textContent = state.focusSeat ? 'เปิด' : 'ปิด';
+    }
+    const th = $('#setTheater');
+    if (th) {
+      th.setAttribute('aria-pressed', String(!state.theaterOff));
+      th.textContent = state.theaterOff ? 'ปิด' : 'เปิด';
+    }
+    const set = $('#setSpeed');
+    if (set) set.textContent = SPEEDS[state.speedIdx].label;
+    const zoom = $('#setZoom');
+    if (zoom) zoom.textContent = zoomScale > 1.01 ? 'พอดีจอ' : 'ขยาย';
+  }
+
+  function openSheet() {
+    sheetOpen = true;
+    $('#settingsSheet').hidden = false;
+    $('#sheetBackdrop').hidden = false;
+    document.body.classList.add('sheet-open');
+    document.body.classList.remove('controls-hidden');
+    clearTimeout(hideTimer);
+    syncSheet();
+  }
+
+  function closeSheet() {
+    sheetOpen = false;
+    $('#settingsSheet').hidden = true;
+    $('#sheetBackdrop').hidden = true;
+    document.body.classList.remove('sheet-open');
+    pokePlayer();
+  }
+
+  function wirePlayerUI() {
+    const on = (sel, fn) => {
+      const el = $(sel);
+      if (el) el.addEventListener('click', fn);
+    };
+    on('#btnSettings', openSheet);
+    on('#thSettings', openSheet);
+    on('#sheetClose', closeSheet);
+    on('#sheetBackdrop', closeSheet);
+
+    on('#setCodes', () => {
+      state.codesOn = !state.codesOn;
+      $('#stageCard').classList.toggle('codes-off', !state.codesOn);
+      $('#btnCodes').classList.toggle('active', state.codesOn);
+      applyZoom();
+      syncSheet();
+    });
+    on('#setFocus', () => { setSeatFocus(!state.focusSeat); syncSheet(); });
+    on('#setTheater', () => {
+      state.theaterOff = !state.theaterOff;
+      if (state.theaterOff && isStageFull()) exitStageFullscreen();
+      updatePlayerMode();
+      syncSheet();
+    });
+    on('#setSpeed', cycleSpeed);
+    on('#setZoom', () => {
+      if (zoomScale > 1.01) resetZoom();
+      else toggleZoom();
+      syncSheet();
+    });
+    on('#setFull', () => { closeSheet(); toggleFull(); });
+    on('#setClearSeat', () => { clearSeat(); syncSheet(); });
+
+    const setSearch = $('#setSearchForm');
+    if (setSearch) {
+      setSearch.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const v = $('#setSearch').value;
+        closeSheet();
+        handleQuickSearch(v);
+        $('#setSearch').value = '';
+      });
+    }
+
+    const myForm = $('#myForm');
+    if (myForm) {
+      myForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const seat = normalizeSeat($('#myInput').value);
+        if (seat) {
+          selectSeat(seat, { force: true });
+          showToast('ที่นั่งของคุณคือ <b>' + seat + '</b>');
+          $('#myInput').blur();
+        } else {
+          showToast('รหัสที่นั่งไม่ถูกต้อง — ใช้ A1 ถึง O10');
+        }
+      });
+    }
+
+    on('#mhPlay', toggleAuto);
+    on('#thPlay', toggleAuto);
+    on('#thCenterPlay', toggleAuto);
+    on('#mhExpand', toggleFull);
+    on('#thPrev', prev);
+    on('#thNext', next);
+    on('#thSpeed', cycleSpeed);
+    on('#thExit', () => {
+      if (isStageFull()) exitStageFullscreen();
+      else {
+        state.theaterOff = true;
+        updatePlayerMode();
+        syncSheet();
+      }
+    });
+
+    document.addEventListener('pointerdown', pokePlayer, true);
+
+    mqTheater.addEventListener('change', updatePlayerMode);
+    mqMobile.addEventListener('change', updatePlayerMode);
+    window.addEventListener('orientationchange', () => setTimeout(updatePlayerMode, 120));
+  }
+
   /* ---------- events ---------- */
   function bindEvents() {
     $('.app-shell').addEventListener('click', (e) => {
@@ -1409,12 +1968,7 @@
     $('#btnPrevFs').addEventListener('click', prev);
     $('#btnNextFs').addEventListener('click', next);
     $('#btnPlay').addEventListener('click', toggleAuto);
-    $('#btnSpeed').addEventListener('click', () => {
-      state.speedIdx = (state.speedIdx + 1) % SPEEDS.length;
-      $('#btnSpeed').textContent = SPEEDS[state.speedIdx].label;
-      if (state.autoplay) startAuto();
-      showToast('ความเร็วเล่นอัตโนมัติ <b>' + SPEEDS[state.speedIdx].label + '</b>');
-    });
+    $('#btnSpeed').addEventListener('click', cycleSpeed);
     $('#scrub').addEventListener('input', (e) => {
       const v = Number(e.target.value);
       setRange(e.target);
@@ -1438,9 +1992,15 @@
     });
 
     $('#standGrid').addEventListener('click', (e) => {
+      if (Date.now() < gestureSuppressUntil) return;
       const cell = e.target.closest('.seat-cell');
       if (!cell) return;
       selectSeat(cell.dataset.seat);
+      if (state.seat) {
+        const hex = curStep().colors[seatIndex()];
+        showToast(`<b>${state.seat}</b> · ${esc(A.colors[hex].short)}`);
+      }
+      pokePlayer();
     });
 
     $('#colorSummary').addEventListener('click', (e) => {
@@ -1457,7 +2017,10 @@
     $('#btnCodes').addEventListener('click', () => {
       const card = $('#stageCard');
       card.classList.toggle('codes-off');
-      $('#btnCodes').classList.toggle('active');
+      state.codesOn = !card.classList.contains('codes-off');
+      $('#btnCodes').classList.toggle('active', state.codesOn);
+      applyZoom();
+      syncSheet();
     });
     $('#btnFocus').addEventListener('click', () => setSeatFocus(!state.focusSeat));
     $('#btnFocus2').addEventListener('click', () => setSeatFocus(!state.focusSeat));
@@ -1584,13 +2147,9 @@
     });
 
     document.addEventListener('fullscreenchange', () => {
-      if (!document.fullscreenElement && state.fsSession) {
-        const z = state.zoomBeforeFull;
-        state.fsSession = false;
-        state.zoomBeforeFull = false;
-        setZoom(Boolean(z));
-      }
+      if (!document.fullscreenElement) state.fsSession = false;
       syncFullBtn();
+      updatePlayerMode();
     });
 
     document.addEventListener('visibilitychange', () => {
@@ -1607,8 +2166,20 @@
     $('#chipSteps').textContent = String(flat.length);
     bindEvents();
     wireRailButtons();
+    wireGestures();
+    wireScrubber();
+    wirePlayerUI();
     setView(state.view);
     syncFullBtn();
+    updatePlayerMode();
+    applyZoom();
+    setInterval(() => {
+      if (!state.autoplay || !state.seat) return;
+      const idx = seatIndex();
+      if (idx < 0) return;
+      const next = seatNextInfo(idx);
+      if (next) updateMyEta(next);
+    }, 250);
     requestAnimationFrame(() => {
       ['songTabs', 'stepPills', 'filmstrip', 'standWrap'].forEach(updateRail);
     });
