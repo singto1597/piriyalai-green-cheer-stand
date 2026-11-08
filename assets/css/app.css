@@ -1550,3 +1550,59 @@ body.theater .stand-wrap { flex: 1 1 auto; min-height: 0; }
   #stageCard.expanded .stand-wrap { overflow: hidden; }
   body.player-mode .stand-wrap { border-radius: 0; }
 }
+
+/* ============================================================
+   ANTI-CAPTURE — ลายน้ำ "ห้ามแคป" + เตือนเมื่อพิมพ์/สลับหน้า
+   ============================================================ */
+.nocap-mark {
+  position: fixed; inset: -25%; z-index: 220;
+  pointer-events: none; user-select: none;
+  transform: rotate(-22deg); transform-origin: center;
+  overflow: hidden;
+}
+.nocap-mark span {
+  position: absolute;
+  font-family: 'Prompt', system-ui, sans-serif;
+  font-size: 13px; font-weight: 500; letter-spacing: .08em;
+  line-height: 1; white-space: nowrap;
+  color: rgba(118, 120, 126, .42);
+  text-shadow: 0 1px 0 rgba(255, 255, 255, .18);
+}
+/* ใน fullscreen เบราว์เซอร์วาดเฉพาะลูกของ #stageCard → ต้องมีลายน้ำของตัวเอง */
+.nocap-stage { display: none; position: absolute; z-index: 9; }
+#stageCard:fullscreen .nocap-stage { display: block; }
+
+/* ป้ายเตือนเต็มจอเมื่อหน้าเสียโฟกัส/ถูกสลับออก */
+.cap-guard {
+  position: fixed; inset: 0; z-index: 9500;
+  display: none; align-items: center; justify-content: center;
+  padding: 24px; text-align: center; pointer-events: none;
+  background: rgba(6, 8, 12, .94);
+  -webkit-backdrop-filter: blur(22px); backdrop-filter: blur(22px);
+}
+body.capture-guard .cap-guard { display: flex; }
+.cg-card { max-width: 320px; color: #fff; }
+.cg-icon { width: 54px; height: 54px; color: #ff5c5c; }
+.cg-card strong {
+  display: block; margin-top: 14px;
+  font-size: clamp(22px, 6vw, 32px); font-weight: 600; letter-spacing: .01em;
+}
+.cg-card p {
+  margin: 10px 0 0; font-size: 13px; line-height: 1.6;
+  color: rgba(255, 255, 255, .68);
+}
+
+/* พิมพ์/บันทึกเป็น PDF → แทนทั้งหน้าด้วยคำเตือน */
+.print-notice { display: none; }
+@media print {
+  body > *:not(.print-notice) { visibility: hidden !important; }
+  .print-notice {
+    display: flex; flex-direction: column;
+    position: fixed; inset: 0; z-index: 99999;
+    align-items: center; justify-content: center; text-align: center;
+    background: #fff; color: #111;
+  }
+  .print-notice * { visibility: visible !important; }
+  .print-notice strong { font-size: 26px; }
+  .print-notice p { font-size: 14px; margin-top: 8px; }
+}

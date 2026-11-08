@@ -2158,6 +2158,78 @@
   }
 
   /* ---------- init ---------- */
+  /* ---------- anti-capture: ลายน้ำ "ห้ามแคป" + เตือน ---------- */
+  function buildNoCapMarks() {
+    const w = Math.round(Math.max(window.innerWidth, 320) * 1.6);
+    const h = Math.round(Math.max(window.innerHeight, 320) * 1.6);
+    ['#noCapMark', '#noCapStage'].forEach((sel) => {
+      const host = $(sel);
+      if (!host) return;
+      const parts = [];
+      for (let y = 0, row = 0; y < h; y += 84, row += 1) {
+        for (let x = (row % 2) * 96; x < w; x += 192) {
+          parts.push(`<span style="left:${x}px;top:${y}px">ห้ามแคป</span>`);
+        }
+      }
+      host.innerHTML = parts.join('');
+    });
+  }
+
+  let capFlash = null;
+  function flashCaptureGuard() {
+    document.body.classList.add('capture-guard');
+    clearTimeout(capFlash);
+    capFlash = setTimeout(() => {
+      if (!document.hidden && document.hasFocus()) document.body.classList.remove('capture-guard');
+    }, 2000);
+  }
+
+  function wireNoCapture() {
+    buildNoCapMarks();
+    let rz = null;
+    window.addEventListener('resize', () => {
+      clearTimeout(rz);
+      rz = setTimeout(buildNoCapMarks, 300);
+    });
+
+    document.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      showToast('ไม่อนุญาตให้แคปหรือบันทึกภาพ');
+    });
+    document.addEventListener('dragstart', (e) => e.preventDefault());
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'PrintScreen') {
+        e.preventDefault();
+        flashCaptureGuard();
+        return;
+      }
+      const mod = e.ctrlKey || e.metaKey;
+      if (mod && !e.altKey && /^(p|s)$/i.test(e.key)) {
+        e.preventDefault();
+        flashCaptureGuard();
+      }
+    });
+
+    // สลับแท็บ/แอป → เบลอทั้งหน้าและขึ้นป้าย "ไม่อนุญาตให้แคป"
+    document.addEventListener('visibilitychange', () => {
+      document.body.classList.toggle('capture-guard', document.hidden);
+    });
+    window.addEventListener('blur', () => { if (!document.hidden) flashCaptureGuard(); });
+    window.addEventListener('focus', () => {
+      clearTimeout(capFlash);
+      document.body.classList.remove('capture-guard');
+    });
+
+    // fullscreen วาดเฉพาะลูกของ stageCard → ย้ายป้ายเตือนเข้าไปตอนเต็มจอ
+    document.addEventListener('fullscreenchange', () => {
+      const guard = $('#capGuard');
+      if (!guard) return;
+      if (document.fullscreenElement) document.fullscreenElement.appendChild(guard);
+      else document.body.appendChild(guard);
+    });
+  }
+
   function init() {
     readHash();
     buildStandGrid();
@@ -2169,6 +2241,7 @@
     wireGestures();
     wireScrubber();
     wirePlayerUI();
+    wireNoCapture();
     setView(state.view);
     syncFullBtn();
     updatePlayerMode();

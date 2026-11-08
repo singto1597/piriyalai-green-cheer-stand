@@ -9,9 +9,12 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <!-- ?v= กัน Cloudflare/browser cache ค้าง: เปลี่ยนเลขนี้ทุกครั้งที่แก้ CSS/JS -->
-<link rel="stylesheet" href="assets/css/app.css?v=20261108-1">
+<link rel="stylesheet" href="assets/css/app.css?v=20261108-4">
 </head>
 <body>
+
+<!-- ลายน้ำห้ามแคป — ทับทุกหน้า, ไม่รับการแตะ (pointer-events: none) -->
+<div class="nocap-mark" id="noCapMark" aria-hidden="true"></div>
 
 <div class="app-shell">
 
@@ -244,6 +247,8 @@
                 </div>
 
                 <div class="color-summary" id="colorSummary"></div>
+                <!-- ลายน้ำในโหมดเต็มจอ (fullscreen render เฉพาะลูกของ stageCard) -->
+                <div class="nocap-mark nocap-stage" id="noCapStage" aria-hidden="true"></div>
               </section>
 
               <!-- personal dashboard (portrait phone) -->
@@ -459,6 +464,10 @@
       <span class="sheet-k">ความเร็วเล่นอัตโนมัติ</span>
       <button type="button" class="sheet-switch" id="setSpeed">1×</button>
     </div>
+    <div class="sheet-row">
+      <span class="sheet-k">ห้ามแคป (ลายน้ำ)</span>
+      <span class="sheet-switch" aria-pressed="true" aria-disabled="true">เปิดเสมอ</span>
+    </div>
     <div class="sheet-grid">
       <button type="button" class="sheet-btn" id="setZoom">พอดีจอ</button>
       <button type="button" class="sheet-btn" id="setFull">เต็มจอ</button>
@@ -467,7 +476,20 @@
   </div>
 </section>
 
-<script src="assets/data/app-data.js?v=20261108-1"></script>
-<script src="assets/js/app.js?v=20261108-1"></script>
+<!-- เตือนเมื่อพยายามแคป/พิมพ์ หรือหน้าถูกสลับออกไป -->
+<div class="cap-guard" id="capGuard" aria-hidden="true">
+  <div class="cg-card">
+    <svg class="cg-icon" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true"><circle cx="24" cy="24" r="17"/><path d="M12.5 12.5l23 23"/></svg>
+    <strong>ไม่อนุญาตให้แคป</strong>
+    <p>เว็บนี้ห้ามบันทึกภาพหน้าจอ<br>กลับเข้าหน้านี้เพื่อใช้งานต่อ</p>
+  </div>
+</div>
+<div class="print-notice">
+  <strong>ไม่อนุญาตให้แคป</strong>
+  <p>เว็บนี้ไม่อนุญาตให้พิมพ์หรือบันทึกหน้านี้</p>
+</div>
+
+<script src="assets/data/app-data.js?v=20261108-4"></script>
+<script src="assets/js/app.js?v=20261108-4"></script>
 </body>
 </html>
