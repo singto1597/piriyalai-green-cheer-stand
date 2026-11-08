@@ -32,6 +32,8 @@
     play: '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.2c0-.85.94-1.37 1.67-.91l10.1 6.8c.67.45.67 1.44 0 1.89l-10.1 6.8A1.1 1.1 0 0 1 8 18.8z"/></svg>',
     pause: '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="4.4" width="4.3" height="15.2" rx="1.2"/><rect x="13.7" y="4.4" width="4.3" height="15.2" rx="1.2"/></svg>',
     caret: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>',
+    metro: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 5L6 9H3v6h3l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.3 6a8.5 8.5 0 0 1 0 12"/></svg>',
+    metroOff: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 5L6 9H3v6h3l5 4V5z"/><path d="M16 9l5 6M21 9l-5 6"/></svg>',
   };
 
   /* ---------- palette classes ---------- */
@@ -73,16 +75,19 @@
   /* ---------- timing ----------
      แต่ละเฟรมมีระยะเวลา = beats × 60000 / bpm ของเพลง
      ค่า beats/bpm มาจาก tools/data/*.csv ผ่าน tools/build_data.py
-     ถ้าโหลด bundle เก่าที่ไม่มีฟิลด์นี้ จะ fallback เป็น 120 BPM / 16 บีต */
-  const DEFAULT_BPM = 120;
+     ถ้าโหลด bundle เก่าที่ไม่มีฟิลด์นี้ จะ fallback เป็น 100 BPM / 16 บีต */
+  const DEFAULT_BPM = 180;
   const DEFAULT_BEATS = 16;
   let showMs = 0;
   songs.forEach((song) => {
     song.bpm = Number(song.bpm) > 0 ? Number(song.bpm) : DEFAULT_BPM;
     const songStart = showMs;
     let songMs = 0;
+    let beatsInSong = 0;
     song.steps.forEach((st) => {
       st.beats = Number(st.beats) > 0 ? Number(st.beats) : DEFAULT_BEATS;
+      st.beatStart = beatsInSong;
+      beatsInSong += st.beats;
       st.durMs = Math.max(1, st.beats * 60000 / song.bpm);
       st.startMs = songStart + songMs;
       songMs += st.durMs;
@@ -92,6 +97,15 @@
     showMs += songMs;
   });
   const SHOW_MS = Math.max(1, showMs);
+
+  /* บีตตำแหน่งรวมทั้งงาน (ใช้เป็นนาฬิกาเดียวของภาพ+เสียง)
+     ทุกเฟรมเริ่มที่บีตจำนวนเต็ม → เปลี่ยนโค้ดตรงจังหวะที่ 1 ของห้องได้จริง */
+  let showBeat = 0;
+  flat.forEach((st) => {
+    st.showBeatStart = showBeat;
+    showBeat += st.beats;
+  });
+  const SHOW_BEATS = showBeat;
 
   function frameAtMs(ms) {
     const t = Math.max(0, Math.min(SHOW_MS, ms));
@@ -225,18 +239,12 @@
   }
 
   /* ---------- state ---------- */
-  const SPEEDS = [
-    { rate: 0.6, label: '0.6×' },
-    { rate: 1, label: '1×' },
-    { rate: 1.8, label: '1.8×' },
-  ];
   const state = {
     view: 'stand',
     si: 0,
     step: 0,
     seat: null,
     autoplay: false,
-    speedIdx: 1,
     focusSeat: false,
     colorFocus: null,
     tlScope: 'all',
@@ -288,14 +296,28 @@
   const curSong = () => songs[state.si];
   const curStep = () => songs[state.si].steps[state.step];
 
+  /* ---------- tempo ----------
+     ค่าเริ่มต้นคือ bpm ของเพลง (จาก songs.csv)
+     ผู้ใช้ปรับ BPM เฉพาะเพลงนี้ได้ โดยไม่แก้ข้อมูลต้นฉบับ            */
+  const BPM_MIN = 40;
+  const BPM_MAX = 240;
+  function songBpm(song) {
+    const n = Number(song.playBpm);
+    return n >= BPM_MIN && n <= BPM_MAX ? n : song.bpm;
+  }
+
   function framePlayMs(st) {
-    return st.durMs / SPEEDS[state.speedIdx].rate;
+    const song = curSong();
+    return Math.max(1, st.durMs * (song.bpm / songBpm(song)));
   }
 
   function elapsedInFrame() {
-    if (!state.autoplay || !state.nextAdvanceAt) return 0;
-    const total = framePlayMs(curStep());
-    return Math.max(0, Math.min(total, total - (state.nextAdvanceAt - Date.now())));
+    if (!state.autoplay) return 0;
+    const st = curStep();
+    const song = curSong();
+    /* ตำแหน่งบีตจากนาฬิกาเดียว → แปลงเป็นเวลาแบบโน้ตเพลง (bpm ต้นฉบับ) */
+    const beatsIn = Math.max(0, Math.min(st.beats, playPosBeat() - st.showBeatStart));
+    return beatsIn * (60000 / song.bpm);
   }
 
   function timelineMs() {
@@ -377,22 +399,248 @@
     setView('stand');
   }
 
-  function goGlobal(gi) {
+  function applyFrame(gi) {
     const n = flat.length;
-    const idx = ((gi % n) + n) % n;
-    const st = flat[idx];
+    const st = flat[((gi % n) + n) % n];
     state.si = st.si;
     state.step = st.i;
     if (state.view !== 'stand') setView('stand');
     else { renderStandAll(); updateHash(); }
-    if (state.autoplay) scheduleNext();
+    return st;
   }
 
-  function next() { goGlobal(curStep().gi + 1); }
-  function prev() { goGlobal(curStep().gi - 1); }
+  function goGlobal(gi, anchor = true) {
+    applyFrame(gi);
+    if (state.autoplay && !state.desktopScrubActive) scheduleNext(anchor);
+  }
 
-  /* ---------- autoplay ---------- */
-  let autoTimer = null;
+  function next(opts) { goGlobal(curStep().gi + 1, !(opts && opts.anchor === false)); }
+  function prev(opts) { goGlobal(curStep().gi - 1, !(opts && opts.anchor === false)); }
+
+  /* ---------- autoplay + metronome: นาฬิกาเดียว (บีต) ----------
+     ภาพและเสียงอ่านจากตำแหน่งบีตเดียวกัน
+     · เฟรมเปลี่ยนเมื่อตำแหน่งบีตข้าม showBeatStart ของเฟรมถัดไป
+     · ตัวเคาะ schedule ล่วงหน้าบน AudioContext.currentTime
+     → เปลี่ยนโค้ดตรงจังหวะที่ 1 และไม่หลุดกันแม้ข้ามเฟรม/เพลง */
+  const METRO_KEY = 'greencheer.metroMuted';
+  let metroMuted = true; /* ค่าเริ่มต้น: ปิดไว้ก่อน */
+  let audioCtx = null;
+  let metroNodes = [];
+  let metroNextBeat = 0;
+  let metroNextTime = 0;
+  try {
+    const stored = localStorage.getItem(METRO_KEY);
+    if (stored !== null) metroMuted = stored === '1';
+  } catch (err) {
+    metroMuted = true;
+  }
+
+  /* เนื้อเพลงลอยบนแสตน (มือถือ) — ค่าเริ่มต้นปิด: เห็นแค่หน้าแสตน */
+  const LYRICS_KEY = 'greencheer.showLyrics';
+  let showLyrics = false;
+  try {
+    showLyrics = localStorage.getItem(LYRICS_KEY) === '1';
+  } catch (err) {
+    showLyrics = false;
+  }
+
+  let playTimer = null;
+  const playClock = { beatMs: 500, anchorBeat: 0, anchorTime: 0, audio: false };
+  const CLOCK_LOOKAHEAD = 0.25; /* วินาที */
+
+  function ensureAudio() {
+    if (!audioCtx) {
+      const AudioCtor = window.AudioContext || window.webkitAudioContext;
+      if (!AudioCtor) return null;
+      audioCtx = new AudioCtor();
+    }
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    return audioCtx;
+  }
+
+  function clockNow() {
+    return playClock.audio && audioCtx ? audioCtx.currentTime : performance.now() / 1000;
+  }
+
+  function killMetroNode(entry) {
+    try { entry.osc.stop(); } catch (err) { /* already stopped */ }
+    const i = metroNodes.indexOf(entry);
+    if (i >= 0) metroNodes.splice(i, 1);
+  }
+
+  function stopMetronome() {
+    metroNodes.forEach((entry) => { try { entry.osc.stop(); } catch (err) { /* already stopped */ } });
+    metroNodes = [];
+  }
+
+  /* ตอนเปลี่ยน BPM กลางทาง: เก็บเสียงที่เคาะค้างไว้ถึงบีตเส้นแบ่งไว้
+     แล้วเคาะต่อจากบีตถัดไปด้วย tempo ใหม่ → รอยต่อเพลงไม่มีช่องเงียบ */
+  function stopMetronomeAfter(beat) {
+    metroNodes.slice().forEach((entry) => {
+      if (entry.beat > beat + 1e-6) killMetroNode(entry);
+    });
+  }
+
+  /* เมโทรนอมจังหวะปกติ: เน้นบีต 1 ของห้อง (1245 Hz) บีตอื่น 1000 Hz */
+  function metroClick(at, beat) {
+    if (!audioCtx) return;
+    const bar = Math.round(beat) % 4 === 0;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(bar ? 1245 : 1000, at);
+    gain.gain.setValueAtTime(0.0001, at);
+    gain.gain.exponentialRampToValueAtTime(bar ? 0.2 : 0.12, at + 0.005);
+    gain.gain.exponentialRampToValueAtTime(0.0001, at + 0.09);
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start(at);
+    osc.stop(at + 0.1);
+    const entry = { osc, beat };
+    metroNodes.push(entry);
+    osc.onended = () => {
+      const i = metroNodes.indexOf(entry);
+      if (i >= 0) metroNodes.splice(i, 1);
+    };
+  }
+
+  function playPosBeat() {
+    if (!state.autoplay) return playClock.anchorBeat;
+    const dt = Math.max(0, clockNow() - playClock.anchorTime);
+    return playClock.anchorBeat + dt * 1000 / playClock.beatMs;
+  }
+
+  /* ตั้งจุดอ้างอิงของนาฬิกา: ตำแหน่งบีต `beat` จะเริ่มที่เวลานี้ (อีก 50ms) */
+  function anchorClock(beat) {
+    const ctx = ensureAudio();
+    playClock.audio = !!ctx;
+    playClock.beatMs = 60000 / songBpm(curSong());
+    playClock.anchorBeat = beat;
+    playClock.anchorTime = clockNow() + 0.05;
+    stopMetronome();
+    metroNextBeat = Math.ceil(beat - 1e-6);
+    metroNextTime = playClock.anchorTime + (metroNextBeat - beat) * playClock.beatMs / 1000;
+    const st = curStep();
+    state.nextAdvanceAt = Date.now() + Math.max(0, st.showBeatStart + st.beats - beat) * playClock.beatMs;
+  }
+
+  /* เมโทรนอมเคาะทุกบีต (จังหวะเพลง) — เน้นบีต 1 ของห้อง */
+  function metroPump() {
+    if (metroMuted || !audioCtx) return;
+    const horizon = audioCtx.currentTime + CLOCK_LOOKAHEAD;
+    const stepSec = playClock.beatMs / 1000;
+    while (metroNextTime < horizon) {
+      metroClick(metroNextTime, metroNextBeat);
+      metroNextBeat += 1;
+      metroNextTime += stepSec;
+    }
+  }
+
+  /* pump เดียวจบ: เลื่อนเฟรมตามบีต + อัปเดต ETA + เคาะเมโทรนอม */
+  function playPump() {
+    if (!state.autoplay) { stopPlaybackClock(); return; }
+    const pos = playPosBeat();
+    let st = curStep();
+    while (pos >= st.showBeatStart + st.beats - 1e-6 && st.gi < flat.length - 1) {
+      const boundary = st.showBeatStart + st.beats;
+      const oldBeatMs = playClock.beatMs;
+      const nextSt = applyFrame(st.gi + 1);
+      const nextBeatMs = 60000 / songBpm(songs[nextSt.si]);
+      if (Math.abs(nextBeatMs - oldBeatMs) > 0.01) {
+        /* ข้ามเพลงที่ BPM ต่างกัน — รีแองเคอร์ที่เส้นแบ่งโดยคงตำแหน่งบีต */
+        const now = clockNow();
+        playClock.anchorBeat = boundary;
+        playClock.beatMs = nextBeatMs;
+        playClock.anchorTime = now - (pos - boundary) * oldBeatMs / 1000;
+        stopMetronomeAfter(boundary);
+        metroNextBeat = boundary + 1;
+        metroNextTime = playClock.anchorTime + nextBeatMs / 1000;
+      }
+      st = curStep();
+    }
+    if (st.gi >= flat.length - 1 && pos >= st.showBeatStart + st.beats - 1e-6) {
+      stopAuto();
+      showToast('จบการแสดงแล้ว · ' + fmtMs(SHOW_MS));
+      return;
+    }
+    state.nextAdvanceAt = Date.now()
+      + Math.max(0, st.showBeatStart + st.beats - pos) * playClock.beatMs;
+    metroPump();
+  }
+
+  function ensurePlayClock() {
+    if (playTimer) return;
+    playTimer = setInterval(playPump, 20);
+    playPump();
+  }
+
+  function stopPlaybackClock() {
+    if (playTimer) clearInterval(playTimer);
+    playTimer = null;
+    state.nextAdvanceAt = 0;
+    stopMetronome();
+  }
+
+  function scheduleNext(anchor = true) {
+    if (!state.autoplay) { stopPlaybackClock(); return; }
+    if (anchor || !playTimer) anchorClock(curStep().showBeatStart);
+    ensurePlayClock();
+  }
+
+  function updateMetroBtn() {
+    const icon = metroMuted ? ICONS.metroOff : ICONS.metro;
+    const label = metroMuted ? 'เปิดเสียงเมโทรนอม' : 'ปิดเสียงเมโทรนอม';
+    ['#btnMetro', '#thMetro', '#mhMetro'].forEach((sel) => {
+      const btn = $(sel);
+      if (!btn) return;
+      btn.innerHTML = icon;
+      btn.setAttribute('aria-label', label);
+      btn.setAttribute('aria-pressed', String(!metroMuted));
+      btn.classList.toggle('is-muted', metroMuted);
+    });
+    const set = $('#setMetro');
+    if (set) {
+      set.textContent = metroMuted ? 'ปิด' : 'เปิด';
+      set.setAttribute('aria-pressed', String(!metroMuted));
+    }
+  }
+
+  function toggleMetro() {
+    metroMuted = !metroMuted;
+    try { localStorage.setItem(METRO_KEY, metroMuted ? '1' : '0'); } catch (err) { /* ignore */ }
+    updateMetroBtn();
+    if (metroMuted) {
+      stopMetronome();
+    } else if (state.autoplay && playTimer) {
+      /* เปิดเสียงกลางทาง: เริ่มเคาะจากบีตถัดไปของนาฬิกาเดิม ไม่รีสตาร์ตภาพ */
+      const pos = playPosBeat();
+      const beatSec = playClock.beatMs / 1000;
+      metroNextBeat = Math.ceil(pos - 1e-6);
+      metroNextTime = clockNow() + Math.max(0.02, (metroNextBeat - pos) * beatSec);
+      metroPump();
+    }
+    showToast(metroMuted ? 'ปิดเสียงเมโทรนอม' : 'เปิดเสียงเมโทรนอม');
+  }
+
+  function updateLyricBtn() {
+    const label = showLyrics ? 'ซ่อนเนื้อเพลง' : 'แสดงเนื้อเพลงบนแสตน';
+    ['#mhLyric', '#thLyric'].forEach((sel) => {
+      const btn = $(sel);
+      if (!btn) return;
+      btn.setAttribute('aria-label', label);
+      btn.setAttribute('aria-pressed', String(showLyrics));
+      btn.classList.toggle('is-muted', !showLyrics);
+    });
+  }
+
+  function toggleLyrics() {
+    showLyrics = !showLyrics;
+    try { localStorage.setItem(LYRICS_KEY, showLyrics ? '1' : '0'); } catch (err) { /* ignore */ }
+    updateLyricBtn();
+    renderLyric();
+    showToast(showLyrics ? 'แสดงเนื้อเพลงบนแสตน' : 'ซ่อนเนื้อเพลง — เห็นแค่แสตน');
+  }
+
   function updatePlayBtn() {
     const icon = state.autoplay ? ICONS.pause : ICONS.play;
     const label = state.autoplay ? 'หยุดเล่นอัตโนมัติ' : 'เล่นอัตโนมัติ';
@@ -404,44 +652,26 @@
     });
     document.body.classList.toggle('is-playing', state.autoplay);
   }
-  function clearAutoTimer() {
-    if (autoTimer) clearTimeout(autoTimer);
-    autoTimer = null;
-    state.nextAdvanceAt = 0;
-  }
-  function scheduleNext() {
-    clearAutoTimer();
-    if (!state.autoplay) return;
-    const ms = Math.max(1, framePlayMs(curStep()));
-    state.nextAdvanceAt = Date.now() + ms;
-    autoTimer = setTimeout(autoTick, ms);
-  }
-  function autoTick() {
-    autoTimer = null;
-    if (!state.autoplay) return;
-    if (curStep().gi >= flat.length - 1) {
-      stopAuto();
-      showToast('จบการแสดงแล้ว · ' + fmtMs(SHOW_MS));
-      return;
-    }
-    next();
-  }
+
   function stopAuto() {
     state.autoplay = false;
-    clearAutoTimer();
+    stopPlaybackClock();
     state.dragMs = null;
     updatePlayBtn();
     renderMyCard();
   }
+
   function startAuto() {
     stopAuto();
-    if (curStep().gi >= flat.length - 1) goGlobal(0);
+    if (curStep().gi >= flat.length - 1) goGlobal(0, false);
     state.autoplay = true;
-    scheduleNext();
+    anchorClock(curStep().showBeatStart);
+    ensurePlayClock();
     updatePlayBtn();
     renderMyCard();
     renderPlayerChrome();
   }
+
   function toggleAuto() {
     if (state.autoplay) stopAuto();
     else startAuto();
@@ -513,7 +743,7 @@
     const card = $('#playerCard');
     card.style.setProperty('--sa', song.theme[0]);
     card.style.setProperty('--sb', song.theme[1]);
-    $('#playerKicker').textContent = `SONG ${String(song.id).padStart(2, '0')} · ${codeLabel(song)} · ${song.bpm} BPM`;
+    $('#playerKicker').textContent = `SONG ${String(song.id).padStart(2, '0')} · ${codeLabel(song)} · ${Math.round(songBpm(song))} BPM`;
     $('#playerTitle').textContent = song.title;
     const allWhite = song.steps.every((x) => x.colored === 0);
     $('#playerSub').textContent = song.subtitle + (allWhite ? ' · หน้านี้เป็นโพยลำดับ ไม่มีกริดสี' : '');
@@ -529,7 +759,6 @@
       scrub.value = String(Math.round(timelineMs()));
       setRange(scrub);
     }
-    $('#btnSpeed').textContent = SPEEDS[state.speedIdx].label;
     const dom = dominantPal(st);
     $('#stepPills').innerHTML = song.steps.map((x, j) => `
       <button class="step-pill${j === st.i ? ' active' : ''}" data-i="${j}" title="${esc(x.name)}">
@@ -565,11 +794,45 @@
       track.setAttribute('aria-valuenow', String(Math.round(nowMs)));
       track.setAttribute('aria-valuetext', `${fmtMs(nowMs)} จาก ${fmtMs(SHOW_MS)}`);
     }
-    const speed = $('#thSpeed');
-    if (speed) speed.textContent = SPEEDS[state.speedIdx].label;
     const frameLabel = $('#myFrameLabel');
     if (frameLabel) frameLabel.textContent = `${st.code} · เฟรม ${st.gi + 1}/${total}`;
+    syncBpmInputs();
     syncScrubTime();
+  }
+
+  /* ---------- BPM ที่ปรับเอง (ค่าเริ่มต้น = bpm ของเพลง) ---------- */
+  function syncBpmInputs() {
+    const song = curSong();
+    const val = String(Math.round(songBpm(song)));
+    $$('.bpm-input').forEach((el) => {
+      if (document.activeElement !== el) el.value = val;
+      el.title = `BPM ที่เล่นอยู่ · ค่าเริ่มต้นของเพลง ${song.bpm} BPM`;
+    });
+    $$('.bpm-ctl').forEach((el) => {
+      el.title = `BPM ของเพลง — แก้ได้ระหว่างซ้อม · ค่าเริ่มต้น ${song.bpm} BPM`;
+    });
+  }
+  function setPlayBpm(raw) {
+    const song = curSong();
+    if (raw == null || String(raw).trim() === '') { syncBpmInputs(); return; }
+    const n = Math.round(Number(raw));
+    if (!Number.isFinite(n)) { syncBpmInputs(); return; }
+    const next = Math.min(BPM_MAX, Math.max(BPM_MIN, n));
+    const prev = songBpm(song);
+    if (next === song.bpm) delete song.playBpm;
+    else song.playBpm = next;
+    syncBpmInputs();
+    if (next === prev) return;
+    if (state.autoplay) {
+      /* เปลี่ยน tempo กลางเพลง: คงตำแหน่งบีตปัจจุบัน ไม่กระโดดกลับต้นเฟรม */
+      const pos = playPosBeat();
+      anchorClock(pos);
+      ensurePlayClock();
+    }
+    renderPlayer();
+    showToast(next === song.bpm
+      ? `BPM <b>${next}</b> · ค่าเริ่มต้นของเพลง`
+      : `BPM <b>${next}</b> · ค่าเริ่มต้น ${song.bpm}`);
   }
 
   function lyricAccent(st) {
@@ -583,18 +846,38 @@
     return best;
   }
 
+  /* token: "คำ" = เฉพาะครั้งแรก | "คำ#2" ครั้งที่ 2 | "คำ#1-3" ช่วง | "คำ#all" ทุกที่ */
+  function highlightRanges(line, token) {
+    const m = /^(.*?)#(all|\d+(?:-\d+)?(?:,\d+(?:-\d+)?)*)$/.exec(token);
+    const text = m ? m[1] : token;
+    if (!text) return [];
+    const hits = [];
+    let from = 0;
+    while (from <= line.length - text.length) {
+      const i = line.indexOf(text, from);
+      if (i < 0) break;
+      hits.push([i, i + text.length]);
+      from = i + text.length;
+    }
+    if (!m) return hits.slice(0, 1);
+    if (m[2] === 'all') return hits;
+    const picked = [];
+    m[2].split(',').forEach((part) => {
+      const nums = part.split('-').map(Number);
+      const end = nums.length > 1 ? nums[1] : nums[0];
+      for (let n = nums[0]; n <= end; n += 1) {
+        if (hits[n - 1]) picked.push(hits[n - 1]);
+      }
+    });
+    return picked;
+  }
+
   function lyricHTML(line, words, accent) {
     const meta = A.colors[accent] || { text: '#ffffff' };
     const ranges = [];
     (words || []).forEach((w) => {
       if (!w) return;
-      let from = 0;
-      while (from <= line.length) {
-        const i = line.indexOf(w, from);
-        if (i < 0) break;
-        ranges.push([i, i + w.length]);
-        from = i + w.length;
-      }
+      ranges.push(...highlightRanges(line, w));
     });
     ranges.sort((a, b) => a[0] - b[0] || b[1] - a[1]);
     const merged = [];
@@ -630,12 +913,17 @@
     lineEl.innerHTML = html || '— เฟรมแทรก ไม่มีคำร้อง —';
     lineEl.classList.toggle('is-empty', !valid);
     $('#lyricCue').textContent = st.cue || '—';
-    /* subtitle ใน theater + เนื้อเพลงในการ์ดของฉัน */
+    /* subtitle ใน theater + เนื้อเพลงลอยบนแสตน + การ์ดของฉัน */
     const sub = $('#thSub');
     if (sub) {
       sub.innerHTML = html;
       sub.classList.toggle('is-empty', !valid);
+      sub.hidden = !showLyrics || !valid;
     }
+    const overlay = $('#standLyric');
+    const overlayLine = $('#slLine');
+    if (overlayLine) overlayLine.innerHTML = html || '';
+    if (overlay) overlay.hidden = !showLyrics || !valid;
     const mine = $('#myLyricLine');
     if (mine) mine.innerHTML = html || '— เฟรมแทรก ไม่มีคำร้อง —';
   }
@@ -1786,7 +2074,7 @@
     track.addEventListener('pointerdown', (e) => {
       e.preventDefault();
       dragging = true;
-      clearAutoTimer();
+      stopPlaybackClock();
       pokePlayer();
       try { track.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
       preview(e.clientX);
@@ -1815,19 +2103,6 @@
     });
   }
 
-  function cycleSpeed() {
-    state.speedIdx = (state.speedIdx + 1) % SPEEDS.length;
-    const btn = $('#btnSpeed');
-    if (btn) btn.textContent = SPEEDS[state.speedIdx].label;
-    const th = $('#thSpeed');
-    if (th) th.textContent = SPEEDS[state.speedIdx].label;
-    const set = $('#setSpeed');
-    if (set) set.textContent = SPEEDS[state.speedIdx].label;
-    if (state.autoplay) startAuto();
-    else renderMyCard();
-    showToast('ความเร็วเล่นอัตโนมัติ <b>' + SPEEDS[state.speedIdx].label + '</b>');
-  }
-
   /* ---------- settings sheet ---------- */
   function syncSheet() {
     const codes = $('#setCodes');
@@ -1845,8 +2120,7 @@
       th.setAttribute('aria-pressed', String(!state.theaterOff));
       th.textContent = state.theaterOff ? 'ปิด' : 'เปิด';
     }
-    const set = $('#setSpeed');
-    if (set) set.textContent = SPEEDS[state.speedIdx].label;
+    syncBpmInputs();
     const zoom = $('#setZoom');
     if (zoom) zoom.textContent = zoomScale > 1.01 ? 'พอดีจอ' : 'ขยาย';
   }
@@ -1893,7 +2167,7 @@
       updatePlayerMode();
       syncSheet();
     });
-    on('#setSpeed', cycleSpeed);
+    on('#setMetro', toggleMetro);
     on('#setZoom', () => {
       if (zoomScale > 1.01) resetZoom();
       else toggleZoom();
@@ -1929,12 +2203,15 @@
     }
 
     on('#mhPlay', toggleAuto);
+    on('#mhMetro', toggleMetro);
+    on('#mhLyric', toggleLyrics);
+    on('#thLyric', toggleLyrics);
     on('#thPlay', toggleAuto);
     on('#thCenterPlay', toggleAuto);
+    on('#thMetro', toggleMetro);
     on('#mhExpand', toggleFull);
     on('#thPrev', prev);
     on('#thNext', next);
-    on('#thSpeed', cycleSpeed);
     on('#thExit', () => {
       if (isStageFull()) exitStageFullscreen();
       else {
@@ -1977,7 +2254,14 @@
     $('#btnPrevFs').addEventListener('click', prev);
     $('#btnNextFs').addEventListener('click', next);
     $('#btnPlay').addEventListener('click', toggleAuto);
-    $('#btnSpeed').addEventListener('click', cycleSpeed);
+    $('#btnMetro').addEventListener('click', toggleMetro);
+    $$('.bpm-input').forEach((el) => {
+      el.addEventListener('change', () => setPlayBpm(el.value));
+      el.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') { e.preventDefault(); el.blur(); }
+        else if (e.key === 'Escape') { syncBpmInputs(); el.blur(); }
+      });
+    });
     let scrubEndTimer = null;
     const finishScrub = () => {
       if (!state.desktopScrubActive) return;
@@ -1994,7 +2278,7 @@
       const ms = Number(e.target.value);
       state.desktopScrubActive = true;
       state.dragMs = ms;
-      clearAutoTimer();
+      stopPlaybackClock();
       setRange(e.target);
       goGlobal(frameAtMs(ms));
       scrubEndSoon();
@@ -2166,6 +2450,7 @@
       if (e.key === 'ArrowRight') { e.preventDefault(); next(); }
       else if (e.key === 'ArrowLeft') { e.preventDefault(); prev(); }
       else if (e.key === ' ') { e.preventDefault(); toggleAuto(); }
+      else if (e.key === 'm' || e.key === 'M') toggleMetro();
       else if (e.key === '1') setView('stand');
       else if (e.key === '2') setView('songbook');
       else if (e.key === '3') setView('gallery');
@@ -2187,22 +2472,44 @@
     });
   }
 
-  /* ---------- init ---------- */
-  /* ---------- anti-capture: ลายน้ำ "ห้ามแคป" + เตือน ---------- */
-  function buildNoCapMarks() {
-    const w = Math.round(Math.max(window.innerWidth, 320) * 1.6);
-    const h = Math.round(Math.max(window.innerHeight, 320) * 1.6);
-    ['#noCapMark', '#noCapStage'].forEach((sel) => {
-      const host = $(sel);
-      if (!host) return;
-      const parts = [];
-      for (let y = 0, row = 0; y < h; y += 84, row += 1) {
-        for (let x = (row % 2) * 96; x < w; x += 192) {
-          parts.push(`<span style="left:${x}px;top:${y}px">ห้ามแคป</span>`);
-        }
-      }
-      host.innerHTML = parts.join('');
+  /* ---------- trust notice: แจ้งเตือนครั้งแรก + กันการพิมพ์ ---------- */
+  const TRUST_KEY = 'greencheer.trustVisits';
+  const TRUST_LIMIT = 2;
+
+  function trustVisits() {
+    try { return Number(localStorage.getItem(TRUST_KEY)) || 0; } catch (err) { return 0; }
+  }
+
+  function showTrustNotice() {
+    const modal = $('#trustModal');
+    if (!modal) return;
+    modal.classList.add('is-open');
+    modal.setAttribute('aria-hidden', 'false');
+    document.body.classList.add('trust-open');
+    const btn = $('#trustClose');
+    if (btn) btn.focus();
+  }
+
+  function hideTrustNotice() {
+    const modal = $('#trustModal');
+    if (!modal || !modal.classList.contains('is-open')) return;
+    modal.classList.remove('is-open');
+    modal.setAttribute('aria-hidden', 'true');
+    document.body.classList.remove('trust-open');
+    try { localStorage.setItem(TRUST_KEY, String(trustVisits() + 1)); } catch (err) { /* ignore */ }
+  }
+
+  function wireTrustNotice() {
+    const modal = $('#trustModal');
+    if (!modal) return;
+    $('#trustClose').addEventListener('click', hideTrustNotice);
+    modal.addEventListener('click', (e) => { if (e.target === modal) hideTrustNotice(); });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') hideTrustNotice();
     });
+    const again = $('#showTrust');
+    if (again) again.addEventListener('click', showTrustNotice);
+    if (trustVisits() < TRUST_LIMIT) setTimeout(showTrustNotice, 420);
   }
 
   let capFlash = null;
@@ -2215,13 +2522,6 @@
   }
 
   function wireNoCapture() {
-    buildNoCapMarks();
-    let rz = null;
-    window.addEventListener('resize', () => {
-      clearTimeout(rz);
-      rz = setTimeout(buildNoCapMarks, 300);
-    });
-
     document.addEventListener('contextmenu', (e) => {
       e.preventDefault();
       showToast('ไม่อนุญาตให้แคปหรือบันทึกภาพ');
@@ -2260,6 +2560,7 @@
     });
   }
 
+  /* ---------- init ---------- */
   function init() {
     readHash();
     buildStandGrid();
@@ -2272,9 +2573,12 @@
     wireScrubber();
     wirePlayerUI();
     wireNoCapture();
+    wireTrustNotice();
     setView(state.view);
     syncFullBtn();
     updatePlayerMode();
+    updateMetroBtn();
+    updateLyricBtn();
     applyZoom();
     setInterval(() => {
       if (!state.autoplay) return;
