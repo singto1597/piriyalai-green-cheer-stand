@@ -1,0 +1,345 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>คณะสีเขียว พิริยาลัย · Cheer Stand</title>
+<meta name="description" content="แสตนเชียร์คณะสีเขียว พิริยาลัย 15×10 ทุกโค้ด ทุกเพลง — ดูสีของทุกที่นั่งในทุกเฟรม">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/app.css">
+</head>
+<body>
+
+<div class="app-shell">
+
+  <!-- ================= SIDEBAR (desktop) ================= -->
+  <aside class="sidebar">
+    <button type="button" class="side-brand" data-view="stand" aria-label="คณะสีเขียว พิริยาลัย — กลับหน้าแสตน">
+      <span class="side-logo"><i></i>G</span>
+      <span class="side-brand-copy">
+        <span class="side-brand-name">สีเขียวพิริยาลัย</span>
+        <span class="side-brand-sub">CHEER STAND</span>
+      </span>
+    </button>
+
+    <nav class="side-nav" id="navTabs" aria-label="เมนูหลัก">
+      <p class="nav-label">มุมมอง</p>
+      <button class="nav-row active" data-view="stand" aria-current="page">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M8 4v16M13 4v16M18 4v16"/></svg>
+        <span class="nav-row-label">แสตนเชียร์</span>
+        <kbd>1</kbd>
+      </button>
+      <button class="nav-row" data-view="songbook">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M9 18V6l10-2v12"/><circle cx="6" cy="18" r="3"/><circle cx="16" cy="16" r="3"/></svg>
+        <span class="nav-row-label">ใบเพลง</span>
+        <kbd>2</kbd>
+      </button>
+      <button class="nav-row" data-view="gallery">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+        <span class="nav-row-label">แกลเลอรี</span>
+        <kbd>3</kbd>
+      </button>
+      <button class="nav-row" data-view="analysis">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>
+        <span class="nav-row-label">วิเคราะห์</span>
+        <kbd>4</kbd>
+      </button>
+
+      <div class="side-data">
+        <p class="nav-label">ข้อมูลงาน</p>
+        <dl>
+          <div><dt>ที่นั่ง</dt><dd>150</dd></div>
+          <div><dt>หน้าแสตน</dt><dd>10</dd></div>
+          <div><dt>เฟรม</dt><dd id="chipSteps">86</dd></div>
+          <div><dt>สี</dt><dd>20</dd></div>
+        </dl>
+      </div>
+    </nav>
+
+    <div class="side-foot">
+      <div class="side-team"><i></i>คณะสีเขียว</div>
+      <p>ผึ้งน้อยเกมส์ ครั้งที่ 50</p>
+      <p class="side-note">A2 · ใช้ภายใน</p>
+    </div>
+  </aside>
+
+  <!-- ================= WORK AREA ================= -->
+  <div class="app-col">
+    <header class="app-header">
+      <div class="app-header-inner">
+        <div class="ah-title">
+          <h1 id="pageTitle">แสตนเชียร์</h1>
+          <span class="ah-sub" id="pageSub">15 × 10 · 86 เฟรม</span>
+        </div>
+        <form class="app-search" id="searchForm" autocomplete="off">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+          <input id="quickSeat" type="text" placeholder="ค้นหาที่นั่ง E6 หรือเฟรม 12" aria-label="ค้นหาที่นั่งหรือเฟรม">
+          <button type="submit">ไป</button>
+        </form>
+      </div>
+    </header>
+
+    <main class="app-main" id="appMain">
+      <div class="content">
+
+        <!-- ================= STAND VIEW ================= -->
+        <section id="view-stand" class="view">
+
+          <div class="song-rail">
+            <button class="rail-btn" type="button" data-scroll="songTabs" data-dir="-1" aria-label="เลื่อนรายการเพลงไปทางซ้าย">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+            </button>
+            <div class="song-rail-inner" id="songTabs" aria-label="เลือกเพลง"></div>
+            <button class="rail-btn" type="button" data-scroll="songTabs" data-dir="1" aria-label="เลื่อนรายการเพลงไปทางขวา">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+            </button>
+          </div>
+
+          <div class="stand-layout">
+            <div class="stand-main">
+
+              <section class="player-bar" id="playerCard">
+                <div class="pb-main">
+                  <div class="pb-transport">
+                    <button class="tbtn" id="btnPrev" aria-label="เฟรมก่อนหน้า">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+                    </button>
+                    <button class="tbtn primary" id="btnPlay" aria-label="เล่นอัตโนมัติ"></button>
+                    <button class="tbtn" id="btnNext" aria-label="เฟรมถัดไป">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+                    </button>
+                  </div>
+                  <div class="pb-ident">
+                    <span class="pb-title" id="playerTitle"></span>
+                    <span class="pb-meta"><span id="playerKicker" class="sr-only"></span><code id="playerCode"></code> · <span id="playerCounter"></span></span>
+                    <span class="pb-sub" id="playerSub"></span>
+                  </div>
+                  <div class="pb-scrub">
+                    <input class="range" id="scrub" type="range" min="1" max="86" value="1" aria-label="เลื่อนดูเฟรมทั้งหมด">
+                  </div>
+                  <button class="tbtn speed" id="btnSpeed" title="ความเร็วเล่นอัตโนมัติ">1×</button>
+                </div>
+                <div class="pb-steps-rail">
+                  <button class="rail-btn" type="button" data-scroll="stepPills" data-dir="-1" aria-label="เลื่อนโค้ดไปทางซ้าย">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+                  </button>
+                  <div class="pb-steps" id="stepPills"></div>
+                  <button class="rail-btn" type="button" data-scroll="stepPills" data-dir="1" aria-label="เลื่อนโค้ดไปทางขวา">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+                  </button>
+                </div>
+              </section>
+
+              <section class="panel stage-card" id="stageCard">
+                <div class="panel-head stage-head">
+                  <span class="stage-label">เวที · STAGE</span>
+                  <div class="stage-tools">
+                    <button class="tool-btn active" id="btnCodes">รหัสที่นั่ง</button>
+                    <button class="tool-btn" id="btnFocus">โฟกัสที่นั่ง</button>
+                    <button class="tool-btn zoom-only" id="btnZoom" aria-pressed="false" title="สลับพอดีจอ / ขยาย">ขยาย</button>
+                    <button class="tool-btn icon" id="btnFull" title="ขยายแสตนเต็มจอ" aria-label="ขยายเต็มจอ">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 3H3v5M16 3h5v5M8 21H3v-5M16 21h5v-5"/></svg>
+                    </button>
+                  </div>
+                </div>
+
+                <div class="stand-wrap" id="standWrap">
+                  <div class="stand-grid" id="standGrid" role="grid" aria-label="ผังแสตน 15 คอลัมน์ 10 แถว"></div>
+                </div>
+
+                <div class="stand-pan">
+                  <button class="pan-btn" type="button" data-scroll="standWrap" data-dir="-1">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+                    เลื่อนซ้าย
+                  </button>
+                  <span class="pan-hint">ลากผังหรือกดลูกศร</span>
+                  <button class="pan-btn" type="button" data-scroll="standWrap" data-dir="1">
+                    เลื่อนขวา
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+                  </button>
+                </div>
+
+                <div class="stage-label bottom">ผู้ชม · AUDIENCE</div>
+
+                <div class="lyric-strip" id="lyricStrip" aria-live="polite">
+                  <div class="ls-body">
+                    <div class="ls-top">
+                      <span class="ls-code" id="lyricCode">—</span>
+                      <span class="ls-name" id="lyricName">—</span>
+                      <span class="ls-count" id="lyricCount"></span>
+                    </div>
+                    <p class="ls-line" id="lyricLine">—</p>
+                    <p class="ls-cue" id="lyricCue">—</p>
+                  </div>
+                </div>
+
+                <div class="focus-banner" id="focusBanner">
+                  <span id="focusBannerText"></span>
+                  <button id="focusBannerClear">ล้างโฟกัส</button>
+                </div>
+
+                <div class="color-summary" id="colorSummary"></div>
+              </section>
+
+              <section class="panel film-card">
+                <div class="panel-head">
+                  <span class="panel-title">ฟิล์มเฟรม</span>
+                  <span class="panel-meta" id="filmMeta"></span>
+                </div>
+                <div class="film-rail">
+                  <button class="rail-btn" type="button" data-scroll="filmstrip" data-dir="-1" aria-label="เลื่อนฟิล์มไปทางซ้าย">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+                  </button>
+                  <div class="film" id="filmstrip"></div>
+                  <button class="rail-btn" type="button" data-scroll="filmstrip" data-dir="1" aria-label="เลื่อนฟิล์มไปทางขวา">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+                  </button>
+                </div>
+              </section>
+            </div>
+
+            <aside class="stand-side">
+              <section class="panel inspector-card" id="inspectorCard">
+                <div class="panel-head">
+                  <span class="panel-title">ที่นั่งที่เลือก</span>
+                  <button class="insp-clear" id="inspClear" hidden>ล้าง</button>
+                  <span class="seat-jump">
+                    <input id="seatInput" maxlength="3" aria-label="พิมพ์รหัสที่นั่ง" placeholder="E6">
+                    <button id="seatGo">ไป</button>
+                  </span>
+                </div>
+
+                <div class="insp-top">
+                  <div>
+                    <span class="insp-seat" id="inspSeat">—</span>
+                    <span class="insp-pos" id="inspPos">แตะที่นั่งบนผังเพื่อดูสี</span>
+                  </div>
+                </div>
+
+                <div class="kv">
+                  <div class="kv-row">
+                    <span class="kv-k">สีปัจจุบัน</span>
+                    <span class="kv-v"><i class="sw" id="inspSwatch"></i><b id="inspColorName">ยังไม่ได้เลือก</b><code id="inspHex"></code></span>
+                  </div>
+                  <div class="kv-row">
+                    <span class="kv-k">เฟรม</span>
+                    <span class="kv-v"><code id="inspFrame">—</code></span>
+                  </div>
+                  <div class="kv-row">
+                    <span class="kv-k">แถวจากเวที</span>
+                    <span class="kv-v" id="inspRowFromStage">—</span>
+                  </div>
+                  <div class="kv-row">
+                    <span class="kv-k">เฟรมที่มีสี</span>
+                    <span class="kv-v"><code id="inspColoredFrames">—</code></span>
+                  </div>
+                  <div class="kv-row">
+                    <span class="kv-k">เปลี่ยนจากก่อนหน้า</span>
+                    <span class="kv-v" id="inspChanged">—</span>
+                  </div>
+                  <div class="kv-row">
+                    <span class="kv-k">CUE</span>
+                    <span class="kv-v kv-cue" id="inspCue">—</span>
+                  </div>
+                </div>
+
+                <div class="insp-change" id="inspChange"><span>เลือกที่นั่งเพื่อดูการเปลี่ยนสีทีละเฟรม</span></div>
+
+                <div class="insp-actions">
+                  <button class="btn-primary" id="btnCopy" disabled>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="12" rx="2"/><path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1"/></svg>
+                    คัดลอกโพย
+                  </button>
+                  <button class="btn-ghost" id="btnFocus2" disabled>โฟกัส</button>
+                </div>
+              </section>
+
+              <section class="panel timeline-card">
+                <div class="panel-head">
+                  <span class="panel-title">ไทม์ไลน์</span>
+                  <span class="tl-summary" id="tlSummary">—</span>
+                </div>
+                <div class="seg" id="tlSeg">
+                  <button data-scope="all" class="active">ทุกเพลง</button>
+                  <button data-scope="song">หน้านี้</button>
+                  <button data-scope="colored">เฉพาะสี</button>
+                </div>
+                <div class="tl-colors" id="tlColors"></div>
+                <div class="tl-list" id="tlList"></div>
+              </section>
+            </aside>
+          </div>
+        </section>
+
+        <!-- ================= SONGBOOK VIEW ================= -->
+        <section id="view-songbook" class="view" hidden>
+          <div id="songbookHero"></div>
+          <section class="an-section">
+            <div class="section-head">
+              <h3>ลำดับงานจริง</h3>
+              <span class="section-meta" id="flowMeta"></span>
+            </div>
+            <div class="program-grid" id="songbookFlow"></div>
+          </section>
+          <section class="an-section">
+            <div class="section-head">
+              <h3>แบ่งเพลงตามใบเพลง</h3>
+            </div>
+            <div id="songbookList"></div>
+          </section>
+        </section>
+
+        <!-- ================= GALLERY VIEW ================= -->
+        <section id="view-gallery" class="view" hidden>
+          <div class="panel gallery-toolbar">
+            <select id="gSong" aria-label="กรองตามเพลง"></select>
+            <input id="gSearch" type="text" placeholder="ค้นหาเฟรม / คำร้อง…" aria-label="ค้นหาเฟรม">
+            <label class="switch"><input type="checkbox" id="gColored"> เฉพาะเฟรมมีสี</label>
+            <label class="switch"><input type="checkbox" id="gUnique"> ซ่อนเฟรมซ้ำ</label>
+            <span id="gCount"></span>
+          </div>
+          <div id="galleryContainer"></div>
+        </section>
+
+        <!-- ================= ANALYSIS VIEW ================= -->
+        <section id="view-analysis" class="view" hidden>
+          <div id="analysisContainer"></div>
+        </section>
+
+        <footer class="footer">
+          <div>← → เลื่อนเฟรม · Space เล่นอัตโนมัติ · F เต็มจอ · 1–4 สลับมุมมอง</div>
+          <div class="foot-keys">150 ที่นั่ง · 86 เฟรม</div>
+        </footer>
+      </div>
+    </main>
+  </div>
+
+  <!-- ================= BOTTOM NAV (mobile) ================= -->
+  <nav class="bottom-nav" id="bottomNav" aria-label="เมนูหลัก">
+    <button class="bottom-tab active" data-view="stand">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M8 4v16M13 4v16M18 4v16"/></svg>
+      <span>แสตน</span>
+    </button>
+    <button class="bottom-tab" data-view="songbook">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M9 18V6l10-2v12"/><circle cx="6" cy="18" r="3"/><circle cx="16" cy="16" r="3"/></svg>
+      <span>ใบเพลง</span>
+    </button>
+    <button class="bottom-tab" data-view="gallery">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+      <span>แกลเลอรี</span>
+    </button>
+    <button class="bottom-tab" data-view="analysis">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>
+      <span>วิเคราะห์</span>
+    </button>
+  </nav>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script src="assets/data/app-data.js"></script>
+<script src="assets/js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,20 @@
+# Python
+__pycache__/
+*.py[cod]
+
+# Generated intermediate data
+tools/out/
+
+# Local preview / old single-file build
+test.html
+
+# OS / editor
+.DS_Store
+*~
+*.swp
+
+# Local media and archives (not part of the web app)
+*.mp4
+*.kdenlive
+*.zip
+06581b4c-3b30-4406-b950-e68a32e00d57
