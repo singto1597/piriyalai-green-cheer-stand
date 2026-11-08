@@ -209,7 +209,13 @@ def load_songs(ctx, path):
             "desc": text(row, "desc"),
             "_line": row["_line"],
         })
-    songs.sort(key=lambda s: s["id"])
+    def show_order(song):
+        # ลำดับแสดงจริงยึด show_code (เช่น 14–15 → 14); เพลงที่เพิ่มทีหลัง
+        # (song_id ใหม่) จึงไม่ไปต่อท้ายหลังเมดเล่ย์
+        match = re.match(r"\s*(\d+)", song["show_code"])
+        return (int(match.group(1)) if match else song["id"], song["id"])
+
+    songs.sort(key=show_order)
     return songs
 
 
