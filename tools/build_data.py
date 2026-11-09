@@ -642,7 +642,7 @@ def build_bundle(ctx, songs, lyrics, frames, grids, extras):
                 title = str(entry.get("title") or "")
                 song_title = song["title"]
                 short_ok = song_title.startswith(title) or title.startswith(song_title)
-                if entry.get("file") != song["file"] or (
+                if (entry.get("file") or "") != (song["file"] or "") or (
                     title != song_title and not short_ok
                 ):
                     ctx.warn(
