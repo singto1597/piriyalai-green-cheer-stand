@@ -268,7 +268,7 @@ def load_frames(ctx, path, songs, lyrics):
         if beats_raw == "":
             beats = song_by_id[sid]["default_beats"]
         else:
-            beats = parse_float(ctx, path, row, "beats", minv=1, maxv=64)
+            beats = parse_float(ctx, path, row, "beats", minv=1, maxv=128)
         lyric_raw = text(row, "lyric_line")
         if lyric_raw in ("", "-1"):
             lyric_line = -1
