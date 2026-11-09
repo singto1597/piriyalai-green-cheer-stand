@@ -423,7 +423,7 @@
      · ตัวเคาะ schedule ล่วงหน้าบน AudioContext.currentTime
      → เปลี่ยนโค้ดตรงจังหวะที่ 1 และไม่หลุดกันแม้ข้ามเฟรม/เพลง */
   const METRO_KEY = 'greencheer.metroMuted';
-  let metroMuted = true; /* ค่าเริ่มต้น: ปิดไว้ก่อน */
+  let metroMuted = false; /* ค่าเริ่มต้น: เปิดเสียง */
   let audioCtx = null;
   let metroNodes = [];
   let metroNextBeat = 0;
@@ -432,7 +432,7 @@
     const stored = localStorage.getItem(METRO_KEY);
     if (stored !== null) metroMuted = stored === '1';
   } catch (err) {
-    metroMuted = true;
+    metroMuted = false;
   }
 
   /* เนื้อเพลงลอยบนแสตน (มือถือ) — ค่าเริ่มต้นปิด: เห็นแค่หน้าแสตน */
