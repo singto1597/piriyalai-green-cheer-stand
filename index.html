@@ -9,12 +9,25 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <!-- ?v= กัน Cloudflare/browser cache ค้าง: tools/build_data.py bump ให้อัตโนมัติเมื่อข้อมูลเปลี่ยน -->
-<link rel="stylesheet" href="assets/css/app.css?v=20261108-6">
+<link rel="stylesheet" href="assets/css/app.css?v=20261109-5">
 </head>
 <body>
 
-<!-- ลายน้ำห้ามแคป — ทับทุกหน้า, ไม่รับการแตะ (pointer-events: none) -->
-<div class="nocap-mark" id="noCapMark" aria-hidden="true"></div>
+<!-- แจ้งเตือนความเป็นส่วนตัว — แสดงเฉพาะการเข้าชมครั้งแรกๆ -->
+<div class="trust-modal" id="trustModal" role="dialog" aria-modal="true" aria-labelledby="trustTitle" aria-hidden="true">
+  <div class="trust-card" role="document">
+    <span class="trust-badge">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21c5-2.5 7-6 7-10V5l-7-3-7 3v6c0 4 2 7.5 7 10z"/><path d="M9 11.5l2 2 4-4"/></svg>
+      เฉพาะคณะสีเขียว
+    </span>
+    <h2 id="trustTitle">พื้นที่ของคณะสีเขียว</h2>
+    <p class="trust-lead">พี่ไม่ได้ต้องการให้สีอื่นเข้ามาเห็นความลับของเรานะครับ</p>
+    <p>พี่ทำมาเพราะอยากให้น้องๆได้เห็นภาพรวมของแสตนเราว่า จิ๊กซอว์เล็กๆที่น้องๆอุส่าห์ฝึกฝนกันมา มันสามารถทำให้ได้ภาพรวมใหญ่ที่สวยงามแบบนี้ได้</p>
+    <p>พี่เชื่อใจในตัวน้องๆทุกคนนะครับ ขอบคุณที่ให้ความร่วมมือนะครับ</p>
+    <button type="button" class="trust-btn" id="trustClose">รับทราบ · เข้าดูแสตน</button>
+    <p class="trust-foot">ฝากช่วยกันดูแล — ถ้าเห็นเผยแพร่ผิดที่ บอกพี่ได้เลยนะครับ</p>
+  </div>
+</div>
 
 <div class="app-shell">
 
@@ -126,7 +139,11 @@
                   <div class="pb-scrub">
                     <input class="range" id="scrub" type="range" min="1" max="86" value="1" aria-label="เลื่อนดูเฟรมทั้งหมด">
                   </div>
-                  <button class="tbtn speed" id="btnSpeed" title="ความเร็วเล่นอัตโนมัติ">1×</button>
+                  <label class="bpm-ctl" title="BPM ของเพลง — แก้ได้ระหว่างซ้อม">
+                    <input class="bpm-input" type="number" inputmode="numeric" min="40" max="240" step="1" value="180" aria-label="BPM ของเพลง">
+                    <span>BPM</span>
+                  </label>
+                  <button class="tbtn is-muted" id="btnMetro" type="button" aria-label="เปิดเสียงเมโทรนอม" aria-pressed="false" title="เสียงเมโทรนอม 4/4"></button>
                 </div>
                 <div class="pb-steps-rail">
                   <button class="rail-btn" type="button" data-scroll="stepPills" data-dir="-1" aria-label="เลื่อนโค้ดไปทางซ้าย">
@@ -156,6 +173,10 @@
                   <div class="stand-zoom" id="standZoom">
                     <div class="stand-grid" id="standGrid" role="grid" aria-label="ผังแสตน 15 คอลัมน์ 10 แถว"></div>
                   </div>
+                  <!-- เนื้อเพลงลอยเหนือแสตน (มือถือ) — เปิด/ปิดด้วยปุ่มใน mini HUD -->
+                  <div class="stand-lyric" id="standLyric" hidden>
+                    <p class="sl-line" id="slLine" aria-live="polite"></p>
+                  </div>
                 </div>
 
                 <!-- mini player HUD (portrait phone) -->
@@ -165,6 +186,10 @@
                     <span id="mhCounter">—</span>
                   </div>
                   <div class="mh-actions">
+                    <button class="mh-btn is-muted" type="button" id="mhLyric" aria-label="แสดงเนื้อเพลงบนแสตน" aria-pressed="false">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 8.9 8.9 0 0 1-3.5-.8L3 21l1.4-4.6A8.4 8.4 0 0 1 12 3.1a8.4 8.4 0 0 1 9 8.4z"/><path d="M8.5 10.5h7M8.5 13.5h4.5"/></svg>
+                    </button>
+                    <button class="mh-btn is-muted" type="button" id="mhMetro" aria-label="เปิดเสียงเมโทรนอม" aria-pressed="false"></button>
                     <button class="mh-btn" type="button" id="mhPlay" aria-label="เล่นอัตโนมัติ"></button>
                     <button class="mh-btn" type="button" id="mhExpand" aria-label="ขยายเต็มจอ">
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 3H3v5M16 3h5v5M8 21H3v-5M16 21h5v-5"/></svg>
@@ -199,7 +224,14 @@
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
                       </button>
                       <span class="th-time" id="thTime">—</span>
-                      <button class="th-icon th-speed" type="button" id="thSpeed" aria-label="ความเร็ว">1×</button>
+                      <button class="th-icon is-muted" type="button" id="thLyric" aria-label="แสดงเนื้อเพลงบนแสตน" aria-pressed="false">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 8.9 8.9 0 0 1-3.5-.8L3 21l1.4-4.6A8.4 8.4 0 0 1 12 3.1a8.4 8.4 0 0 1 9 8.4z"/><path d="M8.5 10.5h7M8.5 13.5h4.5"/></svg>
+                      </button>
+                      <button class="th-icon is-muted" type="button" id="thMetro" aria-label="เปิดเสียงเมโทรนอม" aria-pressed="false"></button>
+                      <label class="bpm-ctl th-bpm" title="BPM ของเพลง — แก้ได้ระหว่างซ้อม">
+                        <input class="bpm-input" type="number" inputmode="numeric" min="40" max="240" step="1" value="180" aria-label="BPM ของเพลง">
+                        <span>BPM</span>
+                      </label>
                     </div>
                   </div>
                 </div>
@@ -247,8 +279,6 @@
                 </div>
 
                 <div class="color-summary" id="colorSummary"></div>
-                <!-- ลายน้ำในโหมดเต็มจอ (fullscreen render เฉพาะลูกของ stageCard) -->
-                <div class="nocap-mark nocap-stage" id="noCapStage" aria-hidden="true"></div>
               </section>
 
               <!-- personal dashboard (portrait phone) -->
@@ -461,12 +491,19 @@
       <button type="button" class="sheet-switch" id="setTheater" aria-pressed="true">เปิด</button>
     </div>
     <div class="sheet-row">
-      <span class="sheet-k">ความเร็วเล่นอัตโนมัติ</span>
-      <button type="button" class="sheet-switch" id="setSpeed">1×</button>
+      <span class="sheet-k">BPM ของเพลง (40–240)</span>
+      <label class="bpm-ctl sheet-bpm" title="BPM ของเพลง — แก้ได้ระหว่างซ้อม">
+        <input class="bpm-input" type="number" inputmode="numeric" min="40" max="240" step="1" value="180" aria-label="BPM ของเพลง">
+        <span>BPM</span>
+      </label>
     </div>
     <div class="sheet-row">
-      <span class="sheet-k">ห้ามแคป (ลายน้ำ)</span>
-      <span class="sheet-switch" aria-pressed="true" aria-disabled="true">เปิดเสมอ</span>
+      <span class="sheet-k">เสียงเมโทรนอม (4/4)</span>
+      <button type="button" class="sheet-switch" id="setMetro" aria-pressed="false">ปิด</button>
+    </div>
+    <div class="sheet-row">
+      <span class="sheet-k">แจ้งเตือนความเป็นส่วนตัว</span>
+      <button type="button" class="sheet-switch" id="showTrust">ดูอีกครั้ง</button>
     </div>
     <div class="sheet-grid">
       <button type="button" class="sheet-btn" id="setZoom">พอดีจอ</button>
@@ -489,7 +526,7 @@
   <p>เว็บนี้ไม่อนุญาตให้พิมพ์หรือบันทึกหน้านี้</p>
 </div>
 
-<script src="assets/data/app-data.js?v=20261108-6"></script>
-<script src="assets/js/app.js?v=20261108-6"></script>
+<script src="assets/data/app-data.js?v=20261109-5"></script>
+<script src="assets/js/app.js?v=20261109-5"></script>
 </body>
 </html>

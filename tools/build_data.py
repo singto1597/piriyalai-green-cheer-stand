@@ -28,10 +28,10 @@ PALETTE = [
     "#ffffff", "#000000", "#ff0000", "#00ff00", "#ffff00", "#ff00ff",
     "#7030a0", "#0000ff", "#980000", "#ffc000", "#6aa84f", "#548235",
     "#cc0000", "#00ffff", "#9900ff", "#9933ff", "#ff9900", "#f1c232",
-    "#999999", "#b7b7b7",
+    "#999999", "#b7b7b7", "#d9ead3",
 ]
-CHARS = "0123456789abcdefghij"
-DEFAULT_BPM = 120
+CHARS = "0123456789abcdefghijk"
+DEFAULT_BPM = 180
 DEFAULT_BEATS = 16
 HEX_RE = re.compile(r"^#[0-9a-fA-F]{6}$")
 CACHE_RE = re.compile(r"\?v=(\d{8})-(\d+)")
@@ -177,7 +177,7 @@ def load_songs(ctx, path):
         title = text(row, "title")
         if not title:
             ctx.err(f"{where(path, row)}: title ว่าง")
-        bpm = parse_float(ctx, path, row, "bpm", default=120, minv=40, maxv=240)
+        bpm = parse_float(ctx, path, row, "bpm", default=DEFAULT_BPM, minv=40, maxv=240)
         default_beats = parse_float(
             ctx, path, row, "default_beats", default=16, minv=1, maxv=64
         )
@@ -209,7 +209,13 @@ def load_songs(ctx, path):
             "desc": text(row, "desc"),
             "_line": row["_line"],
         })
-    songs.sort(key=lambda s: s["id"])
+    def show_order(song):
+        # ลำดับแสดงจริงยึด show_code (เช่น 14–15 → 14); เพลงที่เพิ่มทีหลัง
+        # (song_id ใหม่) จึงไม่ไปต่อท้ายหลังเมดเล่ย์
+        match = re.match(r"\s*(\d+)", song["show_code"])
+        return (int(match.group(1)) if match else song["id"], song["id"])
+
+    songs.sort(key=show_order)
     return songs
 
 
@@ -280,13 +286,34 @@ def load_frames(ctx, path, songs, lyrics):
         highlight = [x.strip() for x in highlight_raw.split("|") if x.strip()]
         if highlight and lyric_line is not None and lyric_line >= 1:
             line = lyrics[sid][lyric_line - 1]
-            for word in highlight:
-                count = line.count(word)
-                if count == 0:
+            for token in highlight:
+                m = re.match(r"^(.*?)#(all|\d+(?:-\d+)?(?:,\d+(?:-\d+)?)*)$", token)
+                word = m.group(1) if m else token
+                count = line.count(word) if word else 0
+                if not word or count == 0:
                     ctx.err(
-                        f"{where(path, row)}: คำไฮไลต์ {word!r} "
+                        f"{where(path, row)}: คำไฮไลต์ {token!r} "
                         f"ไม่พบใน lyric line {lyric_line} ของ song {sid}"
                     )
+                    continue
+                if m and m.group(2) != "all":
+                    for part in m.group(2).split(","):
+                        nums = [int(n) for n in part.split("-")]
+                        if min(nums) < 1:
+                            ctx.err(
+                                f"{where(path, row)}: ตัวเลือกครั้งที่ {part!r} "
+                                f"ของ {word!r} ต้องเริ่มที่ 1"
+                            )
+                        elif len(nums) == 2 and nums[0] > nums[1]:
+                            ctx.err(
+                                f"{where(path, row)}: ช่วง {part!r} "
+                                f"ของ {word!r} ต้องเรียงจากน้อยไปมาก"
+                            )
+                        elif max(nums) > count:
+                            ctx.err(
+                                f"{where(path, row)}: {word!r} ปรากฏ {count} ครั้ง "
+                                f"ใน lyric line {lyric_line} แต่ระบุครั้งที่ {max(nums)}"
+                            )
         elif highlight:
             ctx.err(f"{where(path, row)}: มี lyric_highlight แต่ไม่มี lyric_line")
         by_song[sid].append({
@@ -615,7 +642,7 @@ def build_bundle(ctx, songs, lyrics, frames, grids, extras):
                 title = str(entry.get("title") or "")
                 song_title = song["title"]
                 short_ok = song_title.startswith(title) or title.startswith(song_title)
-                if entry.get("file") != song["file"] or (
+                if (entry.get("file") or "") != (song["file"] or "") or (
                     title != song_title and not short_ok
                 ):
                     ctx.warn(
