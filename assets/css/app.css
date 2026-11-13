@@ -2218,6 +2218,8 @@ body.badge-open { overflow: hidden; }
   .cm-en { display: none; }
   .champ-actions { flex-direction: column; }
   .champ-replay { width: 100%; }
+  /* ในแนว column flex-basis ของ .champ-cta (240px) จะกลายเป็นความสูง — รีเซ็ตเป็น auto */
+  .champ-cta { flex: 0 0 auto; width: 100%; }
   .my-stats, .insp-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .badge-toolbar { padding: 10px 12px; }
   .bt-actions { width: 100%; }
