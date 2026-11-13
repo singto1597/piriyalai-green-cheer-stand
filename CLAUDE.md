@@ -5,14 +5,22 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Project Overview
 
 เว็บสแตติกสำหรับดูผังแสตนเชียร์ 15 × 10 (คอลัมน์ A–O, แถว 10 → 1) ของคณะสีเขียว พิริยาลัย
-— 16 เพลง · 17 โค้ด · 151 เฟรม · 21 สี มีมุมมองแสตน ใบเพลง แกลเลอรี วิเคราะห์
+— 16 เพลง · 17 โค้ด · 151 เฟรม · 21 สี ฉบับ **Champion & Time Capsule Edition**
+หลังคว้าแชมป์ครบ 3 รายการ (สแตน · หลีด · พาเหรด) มีมุมมองแสตน ใบเพลง แกลเลอรี
+วิเคราะห์ ผังชื่อเล่น ค้นหาชื่อ/ที่นั่ง/ชั้น ป้ายประจำตัวฉบับแชมป์ + IG Story PNG + ป้ายชื่อ PDF
 และโหมดเล่นอัตโนมัติ (มีเมโทรนอม) โดยไม่มี backend และไม่มีฐานข้อมูล
 
 - `index.html` — หน้าแอปไฟล์เดียว (โครง DOM + สคริปต์)
 - `assets/css/app.css` — สไตล์ทั้งหมด
-- `assets/js/app.js` — ลอจิกแอป + ไทม์ไลน์ล็อกบีต + เมโทรนอม (WebAudio)
-- `assets/data/app-data.js` — **ไฟล์ที่ generate จาก CSV ห้ามแก้ด้วยมือ**
-- `tools/data/*.csv` — ต้นทางข้อมูลจริงทั้งหมด (แก้ที่นี่เท่านั้น)
+- `assets/js/app.js` — ลอจิกแอป + ไทม์ไลน์ล็อกบีต + เมโทรนอม (WebAudio) + เจ้าของ `window.GS`
+- `assets/js/gs-students.js` — index/ค้นหา/จับคู่ชื่อนักเรียน 150 คน
+- `assets/js/gs-celebration.js` — Welcome dialog ฉลองแชมป์ + พลุ canvas
+- `assets/js/gs-search.js` — autocomplete portal (`#saPortal`) ผูกกับ input 5 จุด
+- `assets/js/gs-badge.js` — ป้ายประจำตัว: preview การ์ด IG Story `.igs-*` + canvas Story
+  + ป้ายชื่อ `.bdg-*` พิมพ์เป็น PDF (ช่องข้อมูลส่วนตัวเป็น “ไม่ระบุ” — PDPA ของเว็บ)
+- `assets/img/` — `bg.jpg`, `logo.png`, `tung.png` สำหรับป้าย
+- `assets/data/app-data.js` — **ไฟล์ที่ generate จาก CSV/JSON ห้ามแก้ด้วยมือ**
+- `tools/data/*.csv`, `students.json`, `extras.json` — ต้นทางข้อมูลจริง (แก้ที่นี่เท่านั้น)
 - `tools/build_data.py` — ตรวจ + สร้าง `app-data.js` + รายงานเวลา + bump cache-bust
 - `code/` — ไฟล์ใบเพลงต้นฉบับ (HTML) ใช้เป็นแหล่งอ้างอิงผังสี
 
@@ -27,6 +35,9 @@ python3 tools/build_data.py --check
 
 # สร้าง assets/data/app-data.js + tools/out/timing-report.csv + bump ?v= ใน index.html
 python3 tools/build_data.py
+
+# แก้เฉพาะ CSS/JS (bundle ไม่เปลี่ยน) แต่ต้องกัน cache → bump ?v= ตรง ๆ
+python3 tools/build_data.py --bump
 
 # หลัง build ทุกครั้งที่ index.html เปลี่ยน (bind mount ไฟล์เดี่ยว)
 docker compose restart web
@@ -49,6 +60,8 @@ tools/data/frames.csv    ← เฟรม: song_id, frame_no, code, name, cue, i
 tools/data/grids.csv     ← ผังสี 150 ช่อง (10 แถว × 15 คอลัมน์) ต่อเฟรม
 tools/data/lyrics.csv    ← เนื้อเพลง ( lyric_line อ้างเลขบรรทัด 1-based )
 tools/data/extras.json   ← สี ใบเพลง โปรแกรม อุปกรณ์ ฯลฯ
+tools/data/students.json ← นักเรียน 150 คน: ที่นั่ง ชื่อเล่น ชื่อจริง ชั้น เลขที่
+                           (whitelist 9 คีย์ — ห้ามมีเบอร์โทร/ข้อมูลสุขภาพ)
         ↓  python3 tools/build_data.py
 assets/data/app-data.js  (runtime อ่านไฟล์นี้เท่านั้น)
 ```
@@ -84,6 +97,23 @@ frame_ms = beats × 60000 / bpm          (bpm = ระดับเพลง, bea
 - **`index.html` เป็น bind mount ไฟล์เดี่ยว** — editor ที่เขียนไฟล์ใหม่ (Write/vim :w)
   เปลี่ยน inode → nginx ยังเสิร์ฟของเก่า ต้อง `docker compose restart web`
   (`assets/` เป็น mount โฟลเดอร์ → แก้ JS/CSS แล้วเห็นผลทันที)
+- **SELinux + `/mnt/storage`** — ไฟล์บนดิสก์นี้เป็น `unlabeled_t`; bind mount ต้องมี
+  `:z` (`:ro,z`) ไม่งั้น nginx ฟ้อง permission denied แล้ว restart loop
+- **`students.json`** — build รับเฉพาะ whitelist (`position`, `nickname`, `title`,
+  `first_name`, `last_name`, `fullname`, `classroom_code`, `grade`, `student_number`)
+  และปฏิเสธคีย์ต้องห้าม (`phone`, `contact`, `health`, `allerg`, `disease`, `drug`,
+  `congenital`, `guardian`, ฯลฯ) — ห้ามผ่อนกฎนี้
+- **ชื่อเล่นซ้ำ** 17 ชื่อ / 35 ที่นั่ง — ห้าม auto-select คนแรกจากชื่อซ้ำ
+  `GSStudents.resolve()` คืน `{ambiguous}` ให้ผู้ใช้เลือกด้วยที่นั่ง/ห้อง
+- **`.bdg-*` เท่านั้น** สำหรับป้ายประจำตัว — อย่าใช้ `.sheet` (ชนกับ settings sheet)
+- **ป้ายชื่อ PDF** ใช้ `#badgePrint` + `@media print` (`@page size: A4 landscape`)
+  เติม DOM ตอนกดปุ่มแล้วเรียก `window.print()` — มีแค่ชื่อเล่น/ชื่อจริง/ชั้น/เลขที่/ที่นั่ง
+  ส่วนเบอร์โทร–แพ้ยา–แพ้อาหาร–โรคประจำตัวแสดง “ไม่ระบุ” เสมอ
+  ห้ามดึงข้อมูลจริงลง `students.json` หรือไฟล์ที่เว็บเสิร์ฟ (นโยบาย PDPA ของเว็บนี้)
+- **preview ป้าย = การ์ด IG Story** (`.igs-*` 9:16, container query) ต้องตรงกับ
+  `drawStory()` ใน canvas — แก้ดีไซน์ต้องแก้ทั้งสองที่; `.bdg-*` ใช้เฉพาะแผ่นพิมพ์
+- **หลังแก้ `index.html` ต้อง `docker compose restart web` เสมอ** เพราะเป็น bind mount
+  ไฟล์เดี่ยว; แก้ `assets/` ไม่ต้อง restart
 - **ห้ามแก้ `assets/data/app-data.js`** — build จะเขียนทับ และข้อมูลจะไม่ตรง CSV
 - **อย่าใช้ `song_id` เป็นลำดับแสดง** — ใช้ `show_code` (ข้อผิดพลาดคลาสสิกของ repo นี้)
 - **เพลง placeholder** (13, 14, 15, 16) ใช้ `default_beats` ต่ำ — ถ้าได้เวลาแสดงจริง

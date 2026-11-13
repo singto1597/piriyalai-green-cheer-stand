@@ -131,7 +131,7 @@
 
   /* ---------- global analytics ---------- */
   const colorUsage = new Map(PALETTE.map((h) => [h, { cells: 0, frames: 0, songs: new Set() }]));
-  const seatStats = SEATS.map(() => ({ colored: 0, counts: new Map() }));
+  const seatStats = SEATS.map(() => ({ colored: 0, counts: new Map(), transitions: 0 }));
   for (const song of songs) {
     for (const st of song.steps) {
       st.counts.forEach((n, h) => {
@@ -149,6 +149,25 @@
       }
     }
   }
+
+  /* จำนวนครั้งที่สีของแต่ละที่นั่งเปลี่ยน (นับข้ามเพลงด้วย) +
+     สถิติเพลทแบบแยกขาว/ขึ้นมือออกจากกัน */
+  for (let i = 1; i < flat.length; i += 1) {
+    const prevColors = flat[i - 1].colors;
+    const nextColors = flat[i].colors;
+    for (let k = 0; k < 150; k += 1) {
+      if (prevColors[k] !== nextColors[k]) seatStats[k].transitions += 1;
+    }
+  }
+  seatStats.forEach((s) => {
+    s.handFrames = flat.length - s.colored;
+    s.plateCounts = new Map();
+    s.counts.forEach((n, h) => { if (h !== '#ffffff') s.plateCounts.set(h, n); });
+    s.plateDistinct = s.plateCounts.size;
+    let best = null;
+    s.plateCounts.forEach((n, h) => { if (!best || n > best.n) best = { hex: h, n }; });
+    s.topPlate = best;
+  });
 
   const totalSteps = flat.length;
   const coloredSteps = flat.filter((s) => s.colored > 0).length;
@@ -198,6 +217,13 @@
     const s = String(raw).toUpperCase().replace(/[\s_.\-]/g, '');
     const m = s.match(/^([A-O])(10|[1-9])$/);
     return m && SEAT_INDEX.has(m[1] + m[2]) ? m[1] + m[2] : null;
+  }
+  function studentOf(seat) {
+    return window.GSStudents ? window.GSStudents.get(seat) : null;
+  }
+  function seatWho(seat) {
+    const stu = studentOf(seat);
+    return stu ? `น้อง${stu.nickname} (${stu.grade})` : '';
   }
   function setRange(el) {
     const min = Number(el.min) || 0;
@@ -257,6 +283,7 @@
     fsSession: false,
     theaterOff: false,
     codesOn: true,
+    nicksOn: false,
     nextAdvanceAt: 0,
     dragMs: null,
     desktopScrubActive: false,
@@ -271,7 +298,7 @@
     let p;
     try { p = new URLSearchParams(raw); } catch (e) { return; }
     const v = p.get('view');
-    if (['stand', 'songbook', 'gallery', 'analysis'].includes(v)) state.view = v;
+    if (['stand', 'songbook', 'gallery', 'analysis', 'badge'].includes(v)) state.view = v;
     const s = parseInt(p.get('song'), 10);
     if (s >= 1 && s <= songs.length) state.si = s - 1;
     const st = parseInt(p.get('step'), 10);
@@ -345,12 +372,13 @@
   }
 
   /* ---------- views ---------- */
-  const APP_TITLE = 'คณะสีเขียว พิริยาลัย · Cheer Stand';
+  const APP_TITLE = 'คณะสีเขียว พิริยาลัย · Triple Crown';
   const VIEW_META = {
     stand: { title: 'แสตนเชียร์', sub: `15 × 10 · ${flat.length} เฟรม` },
     songbook: { title: 'ใบเพลง', sub: `${songs.length} เพลง · ${A.songbook.length} ช่วง · ${flat.length} เฟรม` },
     gallery: { title: 'แกลเลอรี', sub: `ทุกเฟรม · ${flat.length}` },
     analysis: { title: 'วิเคราะห์', sub: `ภาพรวมทั้งงาน · ${songs.length} เพลง` },
+    badge: { title: 'ป้ายประจำตัว', sub: 'การ์ด IG Story + ป้ายชื่อ · ดาวน์โหลดเก็บไว้ได้' },
   };
 
   function setView(v) {
@@ -366,7 +394,7 @@
       if (active) b.setAttribute('aria-current', 'page');
       else b.removeAttribute('aria-current');
     });
-    ['stand', 'songbook', 'gallery', 'analysis'].forEach((x) => {
+    ['stand', 'songbook', 'gallery', 'analysis', 'badge'].forEach((x) => {
       const el = $('#view-' + x);
       if (el) el.hidden = x !== v;
     });
@@ -388,7 +416,9 @@
     if (state.view === 'stand') renderStandAll();
     else if (state.view === 'songbook') renderSongbook();
     else if (state.view === 'gallery') renderGallery();
-    else renderAnalysis();
+    else if (state.view === 'badge') {
+      if (window.GSBadge) window.GSBadge.renderView(state.seat);
+    } else renderAnalysis();
   }
 
   function openPage(pageId, stepIndex = 0) {
@@ -404,8 +434,11 @@
     const st = flat[((gi % n) + n) % n];
     state.si = st.si;
     state.step = st.i;
-    if (state.view !== 'stand') setView('stand');
-    else { renderStandAll(); updateHash(); }
+    if (state.view === 'stand') { renderStandAll(); updateHash(); }
+    else if (state.view === 'badge') {
+      if (window.GSBadge) window.GSBadge.renderView(state.seat);
+      updateHash();
+    } else setView('stand');
     return st;
   }
 
@@ -704,7 +737,8 @@
       html += `<div class="glabel row-l">${r}</div>`;
       COLS.forEach((c) => {
         const seat = c + r;
-        html += `<div class="seat-cell p0" data-seat="${seat}" role="gridcell" aria-label="ที่นั่ง ${seat}"><span class="slabel">${seat}</span></div>`;
+        const stu = studentOf(seat);
+        html += `<div class="seat-cell p0" data-seat="${seat}" role="gridcell" aria-label="ที่นั่ง ${seat}"><span class="slabel">${seat}</span><span class="nlabel">${stu ? esc(stu.nickname) : ''}</span></div>`;
       });
       html += `<div class="glabel row-r">${r}</div>`;
     });
@@ -714,6 +748,44 @@
     grid.innerHTML = html;
     cellEls.length = 0;
     $$('.seat-cell', grid).forEach((el) => cellEls.push(el));
+  }
+
+  /* tooltip ชื่อเจ้าของที่นั่ง (desktop hover) */
+  let seatTipEl = null;
+  function showSeatTip(cell) {
+    if (!seatTipEl) seatTipEl = $('#seatTip');
+    const seat = cell && cell.dataset ? cell.dataset.seat : null;
+    if (!seatTipEl || !seat) return;
+    const stu = studentOf(seat);
+    const who = stu
+      ? ` · <b>น้อง${esc(stu.nickname)}</b> <span>(${esc(stu.grade)})</span>`
+      : '';
+    seatTipEl.innerHTML = `<b>${seat}</b>${who}`;
+    const r = cell.getBoundingClientRect();
+    seatTipEl.style.left = (r.left + r.width / 2) + 'px';
+    seatTipEl.style.top = r.top + 'px';
+    seatTipEl.hidden = false;
+  }
+  function hideSeatTip() {
+    if (!seatTipEl) seatTipEl = $('#seatTip');
+    if (seatTipEl) seatTipEl.hidden = true;
+  }
+  function wireSeatTips() {
+    const grid = $('#standGrid');
+    if (!grid) return;
+    grid.addEventListener('pointerover', (e) => {
+      const cell = e.target.closest('.seat-cell');
+      if (cell) showSeatTip(cell);
+    });
+    grid.addEventListener('pointerout', (e) => {
+      const cell = e.target.closest('.seat-cell');
+      if (cell) hideSeatTip();
+    });
+    const standWrap = $('#standWrap');
+    if (standWrap) standWrap.addEventListener('scroll', hideSeatTip, { passive: true });
+    const main = $('#appMain');
+    if (main) main.addEventListener('scroll', hideSeatTip, { passive: true });
+    window.addEventListener('resize', hideSeatTip);
   }
 
   function paintStage() {
@@ -732,8 +804,10 @@
       if (seatDim || (focusColor && hex !== focusColor)) cls += ' dimmed';
       el.className = cls;
       el.style.color = p === 0 ? 'rgba(11,15,22,.62)' : readableText(hex);
-      el.setAttribute('aria-label', `ที่นั่ง ${SEATS[k]} สี${meta.short}`);
-      el.title = `${SEATS[k]} · ${meta.name}`;
+      const who = seatWho(SEATS[k]);
+      const label = `ที่นั่ง ${SEATS[k]}` + (who ? ` · ${who}` : '');
+      el.setAttribute('aria-label', `${label} · สี${meta.short}`);
+      el.title = `${label} · ${meta.name}`;
     }
   }
 
@@ -960,6 +1034,18 @@
       : `เปลี่ยนในอีก ${fmtSec(ms)} วินาที`;
   }
 
+  function statsHTML(stt) {
+    if (!stt) return '';
+    const top = stt.topPlate;
+    const topName = top ? (A.colors[top.hex] ? A.colors[top.hex].name : top.hex) : '—';
+    return `
+      <div class="my-stat"><b>${stt.transitions} ครั้ง</b><span>เปลี่ยนสี/ท่า</span></div>
+      <div class="my-stat"><b>${flat.length} เฟรม</b><span>ทั้งโชว์</span></div>
+      <div class="my-stat"><b>${stt.plateDistinct}/20 สี</b><span>เพลทที่ใช้</span></div>
+      <div class="my-stat"><b>${stt.handFrames} เฟรม</b><span>ขึ้นมือ/พื้น</span></div>
+      <div class="my-stat wide"><b>${top ? esc(topName) + ' · ' + top.n + ' เฟรม' : '—'}</b><span>สีคู่ใจ</span></div>`;
+  }
+
   function renderMyCard() {
     const body = $('#myBody');
     if (!body) return;
@@ -970,6 +1056,12 @@
       card.classList.add('is-empty');
       body.hidden = true;
       if (label) label.textContent = 'ยังไม่เลือกที่นั่ง';
+      const ident = $('#myIdent');
+      if (ident) ident.hidden = true;
+      const stats = $('#myStats');
+      if (stats) stats.innerHTML = '';
+      const badge = $('#myBadgeBtn');
+      if (badge) badge.disabled = true;
       return;
     }
     card.classList.remove('is-empty');
@@ -977,6 +1069,21 @@
     const st = curStep();
     const hex = st.colors[idx];
     if (label) label.textContent = state.seat;
+    const stu = studentOf(state.seat);
+    const ident = $('#myIdent');
+    if (ident) {
+      ident.hidden = !stu;
+      if (stu) {
+        $('#myIdentSeat').textContent = state.seat;
+        $('#myIdentNick').textContent = 'น้อง' + stu.nickname;
+        $('#myIdentName').textContent = stu.fullname;
+        $('#myIdentMeta').textContent = `${stu.grade} · เลขที่ ${stu.studentNumber}`;
+      }
+    }
+    const stats = $('#myStats');
+    if (stats) stats.innerHTML = statsHTML(seatStats[idx]);
+    const badge = $('#myBadgeBtn');
+    if (badge) badge.disabled = !stu;
     const sw = $('#myNowSwatch');
     if (sw) {
       sw.style.backgroundColor = hex;
@@ -1067,6 +1174,12 @@
       $('#inspChanged').textContent = '—';
       $('#inspCue').textContent = '—';
       $('#inspChange').innerHTML = '<span>เลือกที่นั่งเพื่อดูการเปลี่ยนสีทีละเฟรม</span>';
+      const ident = $('#inspIdent');
+      if (ident) ident.hidden = true;
+      const stats = $('#inspStats');
+      if (stats) stats.innerHTML = '';
+      const badge = $('#inspBadgeBtn');
+      if (badge) badge.disabled = true;
       $('#seatInput').value = '';
       syncSeatControls();
       return;
@@ -1079,6 +1192,20 @@
     sw.style.color = hex === '#ffffff' ? '#0f172a' : meta.text;
     $('#inspSeat').textContent = state.seat;
     $('#inspPos').textContent = `คอลัมน์ ${seatCol(state.seat)} · แถว ${seatRow(state.seat)}`;
+    const stu = studentOf(state.seat);
+    const ident = $('#inspIdent');
+    if (ident) {
+      ident.hidden = !stu;
+      if (stu) {
+        $('#inspNick').textContent = 'น้อง' + stu.nickname;
+        $('#inspFullname').textContent = stu.fullname;
+        $('#inspMeta').textContent = `${stu.grade} · เลขที่ ${stu.studentNumber} · ${state.seat}`;
+      }
+    }
+    const stats = $('#inspStats');
+    if (stats) stats.innerHTML = statsHTML(seatStats[idx]);
+    const badge = $('#inspBadgeBtn');
+    if (badge) badge.disabled = !stu;
     $('#inspColorName').textContent = meta.name;
     $('#inspHex').textContent = hex.toUpperCase();
     $('#inspFrame').textContent = st.code;
@@ -1114,6 +1241,10 @@
     if (copy) copy.disabled = !has;
     const focus2 = $('#btnFocus2');
     if (focus2) focus2.disabled = !has;
+    const myBadge = $('#myBadgeBtn');
+    if (myBadge) myBadge.disabled = !has;
+    const inspBadge = $('#inspBadgeBtn');
+    if (inspBadge) inspBadge.disabled = !has;
     if (!has) {
       state.focusSeat = false;
       const focus1 = $('#btnFocus');
@@ -1227,6 +1358,7 @@
     } else if (state.view === 'analysis') {
       updateAnalysisSelection();
     }
+    if (window.GSBadge) window.GSBadge.sync(state.seat);
   }
 
   function selectSeat(raw, opts = {}) {
@@ -2181,8 +2313,8 @@
       setSearch.addEventListener('submit', (e) => {
         e.preventDefault();
         const v = $('#setSearch').value;
-        closeSheet();
-        handleQuickSearch(v);
+        if (window.GSSearch) window.GSSearch.submit($('#setSearch'), { frame: true });
+        else { closeSheet(); handleQuickSearch(v); }
         $('#setSearch').value = '';
       });
     }
@@ -2191,6 +2323,10 @@
     if (myForm) {
       myForm.addEventListener('submit', (e) => {
         e.preventDefault();
+        if (window.GSSearch) {
+          window.GSSearch.submit($('#myInput'), { frame: false });
+          return;
+        }
         const seat = normalizeSeat($('#myInput').value);
         if (seat) {
           selectSeat(seat, { force: true });
@@ -2336,6 +2472,22 @@
       applyZoom();
       syncSheet();
     });
+    const nicksBtn = $('#btnNicks');
+    if (nicksBtn) {
+      nicksBtn.addEventListener('click', () => {
+        state.nicksOn = !state.nicksOn;
+        $('#stageCard').classList.toggle('nicks-on', state.nicksOn);
+        nicksBtn.classList.toggle('active', state.nicksOn);
+        nicksBtn.setAttribute('aria-pressed', String(state.nicksOn));
+        hideSeatTip();
+      });
+    }
+    $$('[data-badge-open]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        if (!state.seat) { showToast('เลือกที่นั่งก่อนดูป้ายประจำตัว'); return; }
+        if (window.GSBadge) window.GSBadge.openModal(state.seat);
+      });
+    });
     $('#btnFocus').addEventListener('click', () => setSeatFocus(!state.focusSeat));
     $('#btnFocus2').addEventListener('click', () => setSeatFocus(!state.focusSeat));
     $('#btnFull').addEventListener('click', toggleFull);
@@ -2361,6 +2513,10 @@
     });
 
     $('#seatGo').addEventListener('click', () => {
+      if (window.GSSearch) {
+        window.GSSearch.submit($('#seatInput'), { frame: false });
+        return;
+      }
       const seat = normalizeSeat($('#seatInput').value);
       if (seat) { selectSeat(seat, { force: true }); showToast('เลือกที่นั่ง <b>' + seat + '</b>'); }
       else showToast('รหัสที่นั่งไม่ถูกต้อง — ใช้ A1 ถึง O10');
@@ -2371,7 +2527,8 @@
 
     $('#searchForm').addEventListener('submit', (e) => {
       e.preventDefault();
-      handleQuickSearch($('#quickSeat').value);
+      if (window.GSSearch) window.GSSearch.submit($('#quickSeat'), { frame: true });
+      else handleQuickSearch($('#quickSeat').value);
     });
 
     $('#btnCopy').addEventListener('click', copyCueSheet);
@@ -2455,6 +2612,7 @@
       else if (e.key === '2') setView('songbook');
       else if (e.key === '3') setView('gallery');
       else if (e.key === '4') setView('analysis');
+      else if (e.key === '5') setView('badge');
       else if (e.key === 'f' || e.key === 'F') { e.preventDefault(); toggleFull(); }
       else if (e.key === 'Escape') {
         if ($('#stageCard').classList.contains('expanded')) exitStageFullscreen();
@@ -2472,94 +2630,6 @@
     });
   }
 
-  /* ---------- trust notice: แจ้งเตือนครั้งแรก + กันการพิมพ์ ---------- */
-  const TRUST_KEY = 'greencheer.trustVisits';
-  const TRUST_LIMIT = 2;
-
-  function trustVisits() {
-    try { return Number(localStorage.getItem(TRUST_KEY)) || 0; } catch (err) { return 0; }
-  }
-
-  function showTrustNotice() {
-    const modal = $('#trustModal');
-    if (!modal) return;
-    modal.classList.add('is-open');
-    modal.setAttribute('aria-hidden', 'false');
-    document.body.classList.add('trust-open');
-    const btn = $('#trustClose');
-    if (btn) btn.focus();
-  }
-
-  function hideTrustNotice() {
-    const modal = $('#trustModal');
-    if (!modal || !modal.classList.contains('is-open')) return;
-    modal.classList.remove('is-open');
-    modal.setAttribute('aria-hidden', 'true');
-    document.body.classList.remove('trust-open');
-    try { localStorage.setItem(TRUST_KEY, String(trustVisits() + 1)); } catch (err) { /* ignore */ }
-  }
-
-  function wireTrustNotice() {
-    const modal = $('#trustModal');
-    if (!modal) return;
-    $('#trustClose').addEventListener('click', hideTrustNotice);
-    modal.addEventListener('click', (e) => { if (e.target === modal) hideTrustNotice(); });
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') hideTrustNotice();
-    });
-    const again = $('#showTrust');
-    if (again) again.addEventListener('click', showTrustNotice);
-    if (trustVisits() < TRUST_LIMIT) setTimeout(showTrustNotice, 420);
-  }
-
-  let capFlash = null;
-  function flashCaptureGuard() {
-    document.body.classList.add('capture-guard');
-    clearTimeout(capFlash);
-    capFlash = setTimeout(() => {
-      if (!document.hidden && document.hasFocus()) document.body.classList.remove('capture-guard');
-    }, 2000);
-  }
-
-  function wireNoCapture() {
-    document.addEventListener('contextmenu', (e) => {
-      e.preventDefault();
-      showToast('ไม่อนุญาตให้แคปหรือบันทึกภาพ');
-    });
-    document.addEventListener('dragstart', (e) => e.preventDefault());
-
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'PrintScreen') {
-        e.preventDefault();
-        flashCaptureGuard();
-        return;
-      }
-      const mod = e.ctrlKey || e.metaKey;
-      if (mod && !e.altKey && /^(p|s)$/i.test(e.key)) {
-        e.preventDefault();
-        flashCaptureGuard();
-      }
-    });
-
-    // สลับแท็บ/แอป → เบลอทั้งหน้าและขึ้นป้าย "ไม่อนุญาตให้แคป"
-    document.addEventListener('visibilitychange', () => {
-      document.body.classList.toggle('capture-guard', document.hidden);
-    });
-    window.addEventListener('blur', () => { if (!document.hidden) flashCaptureGuard(); });
-    window.addEventListener('focus', () => {
-      clearTimeout(capFlash);
-      document.body.classList.remove('capture-guard');
-    });
-
-    // fullscreen วาดเฉพาะลูกของ stageCard → ย้ายป้ายเตือนเข้าไปตอนเต็มจอ
-    document.addEventListener('fullscreenchange', () => {
-      const guard = $('#capGuard');
-      if (!guard) return;
-      if (document.fullscreenElement) document.fullscreenElement.appendChild(guard);
-      else document.body.appendChild(guard);
-    });
-  }
-
   /* ---------- init ---------- */
   function init() {
     readHash();
@@ -2572,8 +2642,7 @@
     wireGestures();
     wireScrubber();
     wirePlayerUI();
-    wireNoCapture();
-    wireTrustNotice();
+    wireSeatTips();
     setView(state.view);
     syncFullBtn();
     updatePlayerMode();
@@ -2593,6 +2662,45 @@
       ['songTabs', 'stepPills', 'filmstrip', 'standWrap'].forEach(updateRail);
     });
   }
+
+  /* โมดูลเสริมโหลดมาก่อน app.js — เปิด API กลางให้แล้วเรียก init ตามลำดับ */
+  window.GS = {
+    A,
+    COLS,
+    ROWS,
+    COL_INDEX,
+    SEATS,
+    SEAT_INDEX,
+    PALETTE,
+    songs,
+    flat,
+    seatStats,
+    state,
+    $,
+    $$,
+    esc,
+    normalizeSeat,
+    miniHTML,
+    readableText,
+    seatRow,
+    seatCol,
+    selectSeat,
+    clearSeat,
+    setView,
+    showToast,
+    refreshSeatUI,
+    seatNextInfo,
+    renderStandAll,
+    closeSheet,
+    seatIndex,
+    goGlobal,
+    curStep,
+    applyFrame,
+  };
+
+  if (window.GSWelcome) window.GSWelcome.init();
+  if (window.GSSearch) window.GSSearch.init();
+  if (window.GSBadge) window.GSBadge.init();
 
   init();
 })();

@@ -47,6 +47,17 @@ FRAME_HEADER = [
     "lyric_line", "lyric_highlight",
 ]
 GRID_HEADER = ["song_id", "frame_no", "row_no", *COLS]
+STUDENT_KEYS = {
+    "position", "nickname", "title", "first_name", "last_name",
+    "fullname", "classroom_code", "grade", "student_number",
+}
+STUDENT_FORBIDDEN_RE = re.compile(
+    r"(phone|mobile|contact|health|allerg|disease|drug|congenital|food|"
+    r"guardian|parent|address|email|tel|โทร|แพ้ยา|แพ้อาหาร|โรคประจำตัว|ผู้ปกครอง)",
+    re.I,
+)
+POSITION_RE = re.compile(r"^[A-O](?:10|[1-9])$")
+CLASSROOM_RE = re.compile(r"^[1-6]\d{2}$")
 
 
 class Ctx:
@@ -461,6 +472,140 @@ def load_extras(ctx, path):
     return data
 
 
+def _keys_recursive(value):
+    if isinstance(value, dict):
+        for key, child in value.items():
+            yield str(key)
+            yield from _keys_recursive(child)
+    elif isinstance(value, list):
+        for child in value:
+            yield from _keys_recursive(child)
+
+
+def load_students(ctx, path):
+    """โหลดรายชื่อเจ้าของที่นั่งที่ผ่านการคัดกรอง PDPA แล้วเท่านั้น
+
+    ไฟล์ต้นทางต้องมีเฉพาะฟิลด์ที่ปลอดภัย 9 ฟิลด์ และห้ามมีข้อมูลติดต่อ/สุขภาพ
+    """
+    if not path.exists():
+        ctx.err(f"{path}: ไม่พบไฟล์")
+        return {}
+    try:
+        data = json.loads(path.read_text(encoding="utf-8-sig"))
+    except json.JSONDecodeError as exc:
+        ctx.err(f"{path}:{exc.lineno}: JSON ผิดรูป — {exc.msg}")
+        return {}
+    if not isinstance(data, list):
+        ctx.err(f"{path}: ต้องเป็น JSON array ของนักเรียน")
+        return {}
+    if len(data) != len(COLS) * len(ROWS):
+        ctx.err(f"{path}: ต้องมี {len(COLS) * len(ROWS)} คน (พบ {len(data)})")
+        return {}
+
+    expected_positions = {c + str(r) for c in COLS for r in ROWS}
+    seen_positions = {}
+    seen_numbers = {}
+    nickname_seats = {}
+    out = {}
+    for idx, rec in enumerate(data):
+        label = f"{path}[{idx}]"
+        if not isinstance(rec, dict):
+            ctx.err(f"{label}: ต้องเป็น object")
+            continue
+        for key in _keys_recursive(rec):
+            if STUDENT_FORBIDDEN_RE.search(key):
+                ctx.err(f"{label}: พบฟิลด์ต้องห้าม {key!r} — ห้ามนำข้อมูลติดต่อ/สุขภาพเข้าเว็บ")
+        extra = sorted(set(rec) - STUDENT_KEYS)
+        missing = sorted(STUDENT_KEYS - set(rec))
+        if extra:
+            ctx.err(f"{label}: มีฟิลด์เกินกำหนด {', '.join(extra)}")
+        if missing:
+            ctx.err(f"{label}: ขาดฟิลด์ {', '.join(missing)}")
+        if extra or missing:
+            continue
+
+        pos = str(rec.get("position") or "").strip()
+        label = f"{path}[{idx}] (position {pos or '?'})"
+        if not POSITION_RE.match(pos):
+            ctx.err(f"{label}: position ต้องเป็น A1–O10")
+            continue
+        if pos in seen_positions:
+            ctx.err(f"{label}: position ซ้ำกับรายการที่ {seen_positions[pos]}")
+            continue
+        seen_positions[pos] = idx
+
+        nick = str(rec.get("nickname") or "").strip()
+        title = str(rec.get("title") or "").strip()
+        first = str(rec.get("first_name") or "").strip()
+        last = str(rec.get("last_name") or "").strip()
+        fullname = str(rec.get("fullname") or "").strip()
+        classroom = str(rec.get("classroom_code") or "").strip()
+        grade = str(rec.get("grade") or "").strip()
+        number_raw = str(rec.get("student_number") or "").strip()
+
+        for name, value in (
+            ("nickname", nick), ("title", title), ("first_name", first),
+            ("last_name", last), ("fullname", fullname),
+            ("classroom_code", classroom), ("grade", grade),
+            ("student_number", number_raw),
+        ):
+            if not value:
+                ctx.err(f"{label}: {name} ว่าง")
+
+        expected_fullname = f"{title}{first} {last}"
+        if fullname != expected_fullname:
+            ctx.err(
+                f"{label}: fullname ไม่ตรง — ต้องเป็น {expected_fullname!r} "
+                f"(พบ {fullname!r})"
+            )
+
+        if not CLASSROOM_RE.match(classroom):
+            ctx.err(f"{label}: classroom_code ต้องเป็นเลข 3 หลัก เช่น 104")
+            continue
+        expected_grade = f"ม.{classroom[0]}/{int(classroom[1:])}"
+        if grade != expected_grade:
+            ctx.err(f"{label}: grade ไม่ตรง — ต้องเป็น {expected_grade!r} (พบ {grade!r})")
+
+        if not re.fullmatch(r"\d{1,2}", number_raw):
+            ctx.err(f"{label}: student_number ต้องเป็นเลข 1–2 หลัก")
+            continue
+        number = int(number_raw)
+        if number < 1 or number > 99:
+            ctx.err(f"{label}: student_number ต้องอยู่ระหว่าง 1–99")
+            continue
+        pair = (classroom, number)
+        if pair in seen_numbers:
+            ctx.err(
+                f"{label}: เลขที่ {number} ซ้ำในห้อง {classroom} "
+                f"(ที่นั่ง {seen_numbers[pair]})"
+            )
+        seen_numbers[pair] = pos
+
+        nickname_seats.setdefault(nick, []).append(pos)
+        out[pos] = {
+            "position": pos,
+            "nickname": nick,
+            "title": title,
+            "firstName": first,
+            "lastName": last,
+            "fullname": fullname,
+            "classroomCode": classroom,
+            "grade": grade,
+            "studentNumber": str(number),
+        }
+
+    missing_positions = sorted(expected_positions - set(out))
+    if missing_positions:
+        ctx.err(f"{path}: ขาดที่นั่ง {', '.join(missing_positions)}")
+    dupes = {n: seats for n, seats in nickname_seats.items() if len(seats) > 1}
+    if dupes:
+        ctx.warn(
+            f"{path}: ชื่อเล่นซ้ำ {len(dupes)} ชื่อ กระทบ "
+            f"{sum(len(s) for s in dupes.values())} ที่นั่ง (ค้นหาต้องเลือกด้วยที่นั่ง/ห้อง)"
+        )
+    return out
+
+
 def build_songbook(ctx, entries, songs, lyrics, frames, path):
     song_by_id = {s["id"]: s for s in songs}
     step_by_code = {}
@@ -540,7 +685,7 @@ def build_songbook(ctx, entries, songs, lyrics, frames, path):
     return out
 
 
-def build_bundle(ctx, songs, lyrics, frames, grids, extras):
+def build_bundle(ctx, songs, lyrics, frames, grids, extras, students):
     colors_in = extras.get("colors") or {}
     colors_out = {}
     for hexv in PALETTE:
@@ -661,6 +806,7 @@ def build_bundle(ctx, songs, lyrics, frames, grids, extras):
             "totalSeats": 150,
         },
         "colors": colors_out,
+        "students": students,
         "songs": songs_out,
         "show": extras.get("show") or {},
         "songbook": songbook,
@@ -725,9 +871,12 @@ def main():
     ap.add_argument("--out", default=str(ROOT / "assets/data/app-data.js"))
     ap.add_argument("--index", default=str(ROOT / "index.html"))
     ap.add_argument("--no-cache-bust", action="store_true")
+    ap.add_argument("--bump", action="store_true",
+                    help="bump ?v= ใน index.html แม้ bundle ไม่เปลี่ยน (ใช้เมื่อแก้เฉพาะ CSS/JS)")
     ap.add_argument("--check", action="store_true", help="ตรวจอย่างเดียว ไม่เขียน")
     ap.add_argument("--report-csv", default=str(ROOT / "tools/out/timing-report.csv"))
     ap.add_argument("--no-report", action="store_true")
+    ap.add_argument("--students", default=None, help="ไฟล์รายชื่อที่คัดกรองแล้ว (default: tools/data/students.json)")
     args = ap.parse_args()
 
     data_dir = Path(args.data_dir)
@@ -737,6 +886,10 @@ def main():
     frames = load_frames(ctx, data_dir / "frames.csv", songs, lyrics)
     grids = load_grids(ctx, data_dir / "grids.csv", frames)
     extras = load_extras(ctx, data_dir / "extras.json")
+    students = load_students(
+        ctx,
+        Path(args.students) if args.students else data_dir / "students.json",
+    )
 
     if ctx.errors:
         for msg in ctx.errors:
@@ -745,7 +898,7 @@ def main():
         return 2
 
     bundle, report, show_ms, total_frames = build_bundle(
-        ctx, songs, lyrics, frames, grids, extras
+        ctx, songs, lyrics, frames, grids, extras, students
     )
     if ctx.errors:
         for msg in ctx.errors:
@@ -776,7 +929,17 @@ def main():
         return 2
     changed = new_text != old_text
     if not changed:
-        print("ข้อมูลไม่เปลี่ยน — ไม่เขียน bundle และไม่ bump ?v=")
+        print("ข้อมูลไม่เปลี่ยน — ไม่เขียน bundle")
+        if not args.bump:
+            print("และไม่ bump ?v= (ถ้าแก้เฉพาะ CSS/JS ให้เติม --bump)")
+            return 0
+        version = bump_cache(Path(args.index), ctx)
+        if ctx.errors:
+            for msg in ctx.errors:
+                print(f"❌ {msg}", file=sys.stderr)
+            return 2
+        print(f"cache-bust: ?v={version}")
+        print("⚠️  index.html เป็น bind mount ไฟล์เดี่ยว — รัน: docker compose restart web")
         return 0
     out_path.write_text(new_text, encoding="utf-8")
     print(f"เขียน {out_path} ({out_path.stat().st_size} bytes)")

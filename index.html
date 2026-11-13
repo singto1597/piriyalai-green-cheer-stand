@@ -3,31 +3,15 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>คณะสีเขียว พิริยาลัย · Cheer Stand</title>
-<meta name="description" content="แสตนเชียร์คณะสีเขียว พิริยาลัย 15×10 ทุกโค้ด ทุกเพลง — ดูสีของทุกที่นั่งในทุกเฟรม">
+<title>คณะสีเขียว พิริยาลัย · Triple Crown Champions</title>
+<meta name="description" content="อนุสรณ์สถานดิจิทัลคณะสีเขียว พิริยาลัย — แชมป์ 3 รายการ ผึ้งน้อยเกมส์ ครั้งที่ 50 · ผังแสตน 15×10 รายชื่อ 150 คน และป้ายประจำตัว">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700;800;900&family=Anuphan:wght@300;400;500;600;700&family=Anton&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <!-- ?v= กัน Cloudflare/browser cache ค้าง: tools/build_data.py bump ให้อัตโนมัติเมื่อข้อมูลเปลี่ยน -->
-<link rel="stylesheet" href="assets/css/app.css?v=20261109-7">
+<link rel="stylesheet" href="assets/css/app.css?v=20261113-4">
 </head>
 <body>
-
-<!-- แจ้งเตือนความเป็นส่วนตัว — แสดงเฉพาะการเข้าชมครั้งแรกๆ -->
-<div class="trust-modal" id="trustModal" role="dialog" aria-modal="true" aria-labelledby="trustTitle" aria-hidden="true">
-  <div class="trust-card" role="document">
-    <span class="trust-badge">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21c5-2.5 7-6 7-10V5l-7-3-7 3v6c0 4 2 7.5 7 10z"/><path d="M9 11.5l2 2 4-4"/></svg>
-      เฉพาะคณะสีเขียว
-    </span>
-    <h2 id="trustTitle">พื้นที่ของคณะสีเขียว</h2>
-    <p class="trust-lead">พี่ไม่ได้ต้องการให้สีอื่นเข้ามาเห็นความลับของเรานะครับ</p>
-    <p>พี่ทำมาเพราะอยากให้น้องๆได้เห็นภาพรวมของแสตนเราว่า จิ๊กซอว์เล็กๆที่น้องๆอุส่าห์ฝึกฝนกันมา มันสามารถทำให้ได้ภาพรวมใหญ่ที่สวยงามแบบนี้ได้</p>
-    <p>พี่เชื่อใจในตัวน้องๆทุกคนนะครับ ขอบคุณที่ให้ความร่วมมือนะครับ</p>
-    <button type="button" class="trust-btn" id="trustClose">รับทราบ · เข้าดูแสตน</button>
-    <p class="trust-foot">ฝากช่วยกันดูแล — ถ้าเห็นเผยแพร่ผิดที่ บอกพี่ได้เลยนะครับ</p>
-  </div>
-</div>
 
 <div class="app-shell">
 
@@ -63,22 +47,27 @@
         <span class="nav-row-label">วิเคราะห์</span>
         <kbd>4</kbd>
       </button>
+      <button class="nav-row nav-row-badge" data-view="badge">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="5" width="19" height="14" rx="2"/><circle cx="8" cy="11" r="2.2"/><path d="M4.8 16.5c.5-1.6 1.7-2.4 3.2-2.4s2.7.8 3.2 2.4M14.5 10h4M14.5 13.5h4"/></svg>
+        <span class="nav-row-label">ป้ายประจำตัว</span>
+        <kbd>5</kbd>
+      </button>
 
       <div class="side-data">
         <p class="nav-label">ข้อมูลงาน</p>
         <dl>
           <div><dt>ที่นั่ง</dt><dd>150</dd></div>
           <div><dt>หน้าแสตน</dt><dd>10</dd></div>
-          <div><dt>เฟรม</dt><dd id="chipSteps">86</dd></div>
-          <div><dt>สี</dt><dd>20</dd></div>
+          <div><dt>เฟรม</dt><dd id="chipSteps">151</dd></div>
+          <div><dt>สีเพลท</dt><dd>20</dd></div>
         </dl>
       </div>
     </nav>
 
     <div class="side-foot">
-      <div class="side-team"><i></i>คณะสีเขียว</div>
+      <div class="side-team"><i></i>คณะสีเขียว · แชมป์ 3 รายการ</div>
       <p>ผึ้งน้อยเกมส์ ครั้งที่ 50</p>
-      <p class="side-note">A2 · ใช้ภายใน</p>
+      <button type="button" class="side-champ" id="btnChampSide">🏆 TRIPLE CROWN · บันทึกความทรงจำ</button>
     </div>
   </aside>
 
@@ -88,13 +77,17 @@
       <div class="app-header-inner">
         <div class="ah-title">
           <h1 id="pageTitle">แสตนเชียร์</h1>
-          <span class="ah-sub" id="pageSub">15 × 10 · 86 เฟรม</span>
+          <span class="ah-sub" id="pageSub">15 × 10 · 151 เฟรม</span>
+          <span class="champ-status" id="champStatus">🏆 TRIPLE CROWN · บันทึกความทรงจำ</span>
         </div>
         <form class="app-search" id="searchForm" autocomplete="off">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
-          <input id="quickSeat" type="text" placeholder="ค้นหาที่นั่ง E6 หรือเฟรม 12" aria-label="ค้นหาที่นั่งหรือเฟรม">
+          <input id="quickSeat" type="text" placeholder="ค้นหาชื่อเล่น ที่นั่ง ชั้น หรือเฟรม" aria-label="ค้นหาชื่อเล่น ที่นั่ง ชั้น หรือเฟรม">
           <button type="submit">ไป</button>
         </form>
+        <button class="champ-open-btn" type="button" id="btnChamp" aria-label="อ่านข้อความฉลองแชมป์" title="ฉลองแชมป์ 3 รายการ">
+          <span aria-hidden="true">🏆</span><span class="cob-text">ฉลองแชมป์</span>
+        </button>
         <button class="gear-btn" type="button" id="btnSettings" aria-label="ตั้งค่า" title="ตั้งค่า">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
         </button>
@@ -137,7 +130,7 @@
                     <span class="pb-sub" id="playerSub"></span>
                   </div>
                   <div class="pb-scrub">
-                    <input class="range" id="scrub" type="range" min="1" max="86" value="1" aria-label="เลื่อนดูเฟรมทั้งหมด">
+                    <input class="range" id="scrub" type="range" min="1" max="151" value="1" aria-label="เลื่อนดูเฟรมทั้งหมด">
                   </div>
                   <label class="bpm-ctl" title="BPM ของเพลง — แก้ได้ระหว่างซ้อม">
                     <input class="bpm-input" type="number" inputmode="numeric" min="40" max="240" step="1" value="180" aria-label="BPM ของเพลง">
@@ -161,6 +154,7 @@
                   <span class="stage-label">เวที · STAGE</span>
                   <div class="stage-tools">
                     <button class="tool-btn active" id="btnCodes">รหัสที่นั่ง</button>
+                    <button class="tool-btn" id="btnNicks" aria-pressed="false" title="แสดงชื่อเล่นของทุกคนบนผัง">ชื่อเล่น</button>
                     <button class="tool-btn" id="btnFocus">โฟกัสที่นั่ง</button>
                     <button class="tool-btn zoom-only" id="btnZoom" aria-pressed="false" title="สลับพอดีจอ / ขยาย">ขยาย</button>
                     <button class="tool-btn icon" id="btnFull" title="ขยายแสตนเต็มจอ" aria-label="ขยายเต็มจอ">
@@ -211,7 +205,7 @@
                   <button class="th-center-play" type="button" id="thCenterPlay" aria-label="เล่นอัตโนมัติ"></button>
                   <div class="th-bottom">
                     <p class="th-sub" id="thSub"></p>
-                    <div class="th-track" id="thTrack" role="slider" tabindex="0" aria-label="ไทม์ไลน์เฟรม" aria-valuemin="1" aria-valuemax="86" aria-valuenow="1">
+                    <div class="th-track" id="thTrack" role="slider" tabindex="0" aria-label="ไทม์ไลน์เฟรม" aria-valuemin="1" aria-valuemax="151" aria-valuenow="1">
                       <div class="th-fill" id="thFill"></div>
                       <div class="th-knob" id="thKnob"></div>
                     </div>
@@ -288,11 +282,19 @@
                   <span class="my-seat-label" id="mySeatLabel">ยังไม่เลือกที่นั่ง</span>
                 </div>
                 <form class="my-form" id="myForm" autocomplete="off">
-                  <input id="myInput" type="text" inputmode="text" maxlength="3" placeholder="รหัสที่นั่ง เช่น F5" aria-label="รหัสที่นั่งของฉัน">
-                  <button type="submit">ดูสีของฉัน</button>
+                  <input id="myInput" type="text" inputmode="text" placeholder="ค้นหาชื่อเล่น ชื่อจริง ที่นั่ง หรือชั้น" aria-label="ค้นหาชื่อเล่น ชื่อจริง ที่นั่ง หรือชั้น">
+                  <button type="submit">ดูการ์ดของฉัน</button>
                 </form>
-                <p class="my-empty" id="myEmpty">แตะที่นั่งบนผัง หรือพิมพ์รหัสที่นั่งเพื่อดูสีของคุณ</p>
+                <p class="my-empty" id="myEmpty">แตะที่นั่งบนผัง หรือพิมพ์ชื่อเล่น/ชื่อจริง/รหัสที่นั่ง เพื่อดูสีและป้ายประจำตัวของคุณ</p>
                 <div class="my-body" id="myBody" hidden>
+                  <div class="my-ident" id="myIdent">
+                    <span class="my-ident-seat" id="myIdentSeat">—</span>
+                    <span class="my-ident-copy">
+                      <b class="my-ident-nick" id="myIdentNick">—</b>
+                      <span class="my-ident-name" id="myIdentName">—</span>
+                      <span class="my-ident-meta" id="myIdentMeta">—</span>
+                    </span>
+                  </div>
                   <div class="my-now">
                     <span class="my-k">สีปัจจุบันของคุณ</span>
                     <div class="my-swatch" id="myNowSwatch"><span id="myNowName">—</span></div>
@@ -307,6 +309,10 @@
                     <span class="my-k">เนื้อเพลงท่อนนี้</span>
                     <p id="myLyricLine">—</p>
                   </div>
+                  <div class="my-stats" id="myStats"></div>
+                  <button class="badge-cta" id="myBadgeBtn" type="button" data-badge-open disabled>
+                    <span aria-hidden="true">🪪</span> ดูป้ายประจำตัว &amp; ดาวน์โหลดการ์ดที่ระลึก
+                  </button>
                 </div>
               </section>
 
@@ -333,7 +339,7 @@
                   <span class="panel-title">ที่นั่งที่เลือก</span>
                   <button class="insp-clear" id="inspClear" hidden>ล้าง</button>
                   <span class="seat-jump">
-                    <input id="seatInput" maxlength="3" aria-label="พิมพ์รหัสที่นั่ง" placeholder="E6">
+                    <input id="seatInput" aria-label="ค้นหาชื่อเล่นหรือรหัสที่นั่ง" placeholder="ชื่อเล่น / E6">
                     <button id="seatGo">ไป</button>
                   </span>
                 </div>
@@ -343,6 +349,12 @@
                     <span class="insp-seat" id="inspSeat">—</span>
                     <span class="insp-pos" id="inspPos">แตะที่นั่งบนผังเพื่อดูสี</span>
                   </div>
+                </div>
+
+                <div class="insp-ident" id="inspIdent" hidden>
+                  <b class="insp-nick" id="inspNick">—</b>
+                  <span class="insp-fullname" id="inspFullname">—</span>
+                  <span class="insp-meta" id="inspMeta">—</span>
                 </div>
 
                 <div class="kv">
@@ -373,6 +385,12 @@
                 </div>
 
                 <div class="insp-change" id="inspChange"><span>เลือกที่นั่งเพื่อดูการเปลี่ยนสีทีละเฟรม</span></div>
+
+                <div class="insp-stats" id="inspStats"></div>
+
+                <button class="badge-cta badge-cta-insp" id="inspBadgeBtn" type="button" data-badge-open disabled>
+                  <span aria-hidden="true">🪪</span> ดูป้ายประจำตัว &amp; ดาวน์โหลดการ์ดที่ระลึก
+                </button>
 
                 <div class="insp-actions">
                   <button class="btn-primary" id="btnCopy" disabled>
@@ -435,9 +453,28 @@
           <div id="analysisContainer"></div>
         </section>
 
+        <!-- ================= CHAMPION BADGE VIEW ================= -->
+        <section id="view-badge" class="view" hidden>
+          <div class="panel badge-toolbar">
+            <div class="bt-copy">
+              <h2>ป้ายประจำตัว</h2>
+              <p>เลือกที่นั่งของน้อง แล้วดาวน์โหลดการ์ด IG Story หรือพิมพ์ป้ายชื่อเก็บไว้ได้เลย</p>
+            </div>
+            <span class="seat-jump badge-jump">
+              <input id="badgeSeatInput" aria-label="ค้นหาชื่อเล่นหรือรหัสที่นั่ง" placeholder="ชื่อเล่น / E6">
+              <button id="badgeSeatGo" type="button">ไป</button>
+            </span>
+            <div class="bt-actions">
+              <button type="button" class="btn-primary" id="badgeDlStory" disabled>⬇ ดาวน์โหลด IG Story</button>
+              <button type="button" class="btn-ghost" id="badgeDlName" disabled>🖨️ โหลดป้ายชื่อ (PDF)</button>
+            </div>
+          </div>
+          <div id="badgeViewMount"></div>
+        </section>
+
         <footer class="footer">
-          <div>← → เลื่อนเฟรม · Space เล่นอัตโนมัติ · F เต็มจอ · 1–4 สลับมุมมอง</div>
-          <div class="foot-keys">150 ที่นั่ง · 86 เฟรม</div>
+          <div>← → เลื่อนเฟรม · Space เล่นอัตโนมัติ · F เต็มจอ · 1–5 สลับมุมมอง</div>
+          <div class="foot-keys">150 ที่นั่ง · 151 เฟรม · 🏆 แชมป์ 3 รายการ</div>
         </footer>
       </div>
     </main>
@@ -461,6 +498,10 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>
       <span>วิเคราะห์</span>
     </button>
+    <button class="bottom-tab" data-view="badge">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="5" width="19" height="14" rx="2"/><circle cx="8" cy="11" r="2.2"/><path d="M4.8 16.5c.5-1.6 1.7-2.4 3.2-2.4s2.7.8 3.2 2.4M14.5 10h4M14.5 13.5h4"/></svg>
+      <span>ป้ายประจำตัว</span>
+    </button>
   </nav>
 </div>
 
@@ -475,7 +516,7 @@
   </div>
   <div class="sheet-body">
     <form class="sheet-search" id="setSearchForm" autocomplete="off">
-      <input id="setSearch" type="text" placeholder="ค้นหาที่นั่ง E6 หรือเฟรม 12" aria-label="ค้นหาที่นั่งหรือเฟรม">
+      <input id="setSearch" type="text" placeholder="ค้นหาชื่อเล่น ที่นั่ง หรือชั้น" aria-label="ค้นหาชื่อเล่น ที่นั่ง หรือชั้น">
       <button type="submit">ไป</button>
     </form>
     <div class="sheet-row">
@@ -502,8 +543,8 @@
       <button type="button" class="sheet-switch" id="setMetro" aria-pressed="false">ปิด</button>
     </div>
     <div class="sheet-row">
-      <span class="sheet-k">แจ้งเตือนความเป็นส่วนตัว</span>
-      <button type="button" class="sheet-switch" id="showTrust">ดูอีกครั้ง</button>
+      <span class="sheet-k">ข้อความฉลองแชมป์</span>
+      <button type="button" class="sheet-switch" id="setChamp">อ่านอีกครั้ง</button>
     </div>
     <div class="sheet-grid">
       <button type="button" class="sheet-btn" id="setZoom">พอดีจอ</button>
@@ -513,20 +554,70 @@
   </div>
 </section>
 
-<!-- เตือนเมื่อพยายามแคป/พิมพ์ หรือหน้าถูกสลับออกไป -->
-<div class="cap-guard" id="capGuard" aria-hidden="true">
-  <div class="cg-card">
-    <svg class="cg-icon" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true"><circle cx="24" cy="24" r="17"/><path d="M12.5 12.5l23 23"/></svg>
-    <strong>ไม่อนุญาตให้แคป</strong>
-    <p>เว็บนี้ห้ามบันทึกภาพหน้าจอ<br>กลับเข้าหน้านี้เพื่อใช้งานต่อ</p>
+<!-- ================= CHAMPION WELCOME — ฉลองแชมป์ 3 รายการ ================= -->
+<div class="champ-modal" id="champModal" role="dialog" aria-modal="true" aria-labelledby="champTitle" aria-hidden="true">
+  <div class="champ-card" role="document">
+    <div class="champ-body">
+      <span class="champ-badge">🏆 TRIPLE CROWN CHAMPIONS · ผึ้งน้อยเกมส์ ครั้งที่ 50</span>
+      <h2 id="champTitle">จิ๊กซอว์ทั้ง 150 ชิ้น...<br><span>วันนี้พวกเราคือที่ 1!</span></h2>
+
+      <div class="champ-medals">
+        <div class="champ-medal">
+          <span class="cm-icon" aria-hidden="true">🥇</span>
+          <b>ชนะเลิศสแตนเชียร์</b>
+          <span class="cm-en">Stand Cheer · Champion</span>
+        </div>
+        <div class="champ-medal">
+          <span class="cm-icon" aria-hidden="true">🥇</span>
+          <b>ชนะเลิศเชียร์หลีดเดอร์</b>
+          <span class="cm-en">Cheerleader · Champion</span>
+        </div>
+        <div class="champ-medal">
+          <span class="cm-icon" aria-hidden="true">🥇</span>
+          <b>ชนะเลิศขบวนพาเหรด</b>
+          <span class="cm-en">Parade · Champion</span>
+        </div>
+      </div>
+
+      <div class="champ-copy">
+        <p>จำข้อความหน้านี้ตอนที่พวกเราซ้อมกันได้ไหมครับ? วันนั้นพี่บอกน้องๆ ว่า จิ๊กซอว์เล็กๆ ที่น้องอุตส่าห์อดทนฝึกฝนกันมา มันจะประกอบกันเป็นภาพรวมใหญ่ที่สวยงาม</p>
+        <p>วันนี้ความลับของคณะสีเขียวไม่ต้องเก็บซ่อนอีกต่อไปแล้ว เพราะพวกเราได้ประกาศให้ทั้งโรงเรียนเห็นกับตาแล้วว่า เมื่อจิ๊กซอว์ทั้ง 150 ชิ้นรวมเป็นหนึ่งเดียว พวกเราสร้างตำนานกวาดแชมป์ครบทั้งสแตนเชียร์ เชียร์หลีดเดอร์ และขบวนพาเหรดได้สำเร็จ!</p>
+        <p>ขอบคุณน้องๆ ทุกคนที่สู้ด้วยกันมาจนถึงที่สุด ลองกดเลือกที่นั่งของตัวเองบนผัง เพื่อดูป้ายประจำตัวและดาวน์โหลดการ์ดที่ระลึกของตัวเองเก็บไว้ได้เลยนะครับ</p>
+      </div>
+
+      <div class="champ-actions">
+        <button type="button" class="champ-replay" id="champReplay">🎆 จุดพลุอีกครั้ง</button>
+        <button type="button" class="champ-cta" id="champCta">เข้าสู่ผังแห่งความทรงจำ &amp; ดูการ์ดของฉัน</button>
+      </div>
+      <p class="champ-foot">คณะสีเขียว พิริยาลัย · ผึ้งน้อยเกมส์ ครั้งที่ 50</p>
+    </div>
   </div>
-</div>
-<div class="print-notice">
-  <strong>ไม่อนุญาตให้แคป</strong>
-  <p>เว็บนี้ไม่อนุญาตให้พิมพ์หรือบันทึกหน้านี้</p>
+  <canvas class="confetti-canvas" id="champCanvas" aria-hidden="true"></canvas>
 </div>
 
-<script src="assets/data/app-data.js?v=20261109-7"></script>
-<script src="assets/js/app.js?v=20261109-7"></script>
+<!-- ================= BADGE MODAL ================= -->
+<div class="badge-modal" id="badgeModal" role="dialog" aria-modal="true" aria-labelledby="badgeModalTitle" aria-hidden="true">
+  <div class="badge-modal-card" role="document">
+    <div class="badge-modal-head">
+      <h2 id="badgeModalTitle">ป้ายประจำตัว</h2>
+      <button type="button" class="sheet-close" id="badgeModalClose">ปิด</button>
+    </div>
+    <div class="badge-modal-body" id="badgeModalMount"></div>
+  </div>
+</div>
+
+<!-- tooltip ชื่อเจ้าของที่นั่ง + portal ของ autocomplete -->
+<div class="seat-tip" id="seatTip" hidden></div>
+<div class="sa-menu" id="saPortal" role="listbox" aria-label="ผลการค้นหา" hidden></div>
+
+<!-- แผ่นป้ายชื่อสำหรับพิมพ์/บันทึกเป็น PDF (เติมเนื้อหาตอนกดปุ่มเท่านั้น) -->
+<div id="badgePrint" aria-hidden="true"></div>
+
+<script src="assets/data/app-data.js?v=20261113-4"></script>
+<script src="assets/js/gs-students.js?v=20261113-4"></script>
+<script src="assets/js/gs-celebration.js?v=20261113-4"></script>
+<script src="assets/js/gs-search.js?v=20261113-4"></script>
+<script src="assets/js/gs-badge.js?v=20261113-4"></script>
+<script src="assets/js/app.js?v=20261113-4"></script>
 </body>
 </html>

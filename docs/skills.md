@@ -75,3 +75,27 @@
 - **Root Cause:** จำนวนเฟรมผูกกับกริดในต้นฉบับ — เพิ่มเฟรมไม่ได้ถ้าไม่มี `grids.csv` และท่อนบรรเลงท้ายเพลงมักไม่มีภาพใหม่
 - **Correct Pattern/Solution:** พับเวลาทั้งช่วงเข้า `beats` ของเฟรมสุดท้าย (เพลง 8 f10 = 16 บีต, เพลง 12 f12–f14 = 5/20/6 บีต) แล้วตรวจ duration รวมกับ `timing-report.csv`; ภาพค้างนานขึ้นแต่ตรงเสียงจริง
 - **Date Added:** 2026-11-09
+
+### 🛠️ bind mount จาก `/mnt/storage` ติด SELinux `unlabeled_t` — nginx อ่านไม่ได้
+- **Context/Problem:** หลังย้ายโปรเจกต์ไปอยู่บน `/mnt/storage` แล้ว `docker compose up -d` container ขึ้นแล้ว restart loop ทันที; log ฟ้อง `open() "/etc/nginx/conf.d/default.conf" failed (13: Permission denied)` ทั้งที่ไฟล์ mode 644
+- **Root Cause:** ดิสก์ `/mnt/storage` ติด label `unlabeled_t` และ SELinux เป็น `Enforcing` — bind mount เข้า container จึงถูกปฏิเสธการอ่าน แม้สิทธิ์ Unix จะถูก
+- **Correct Pattern/Solution:** ใส่ธง `:z` ท้าย mount ทุกเส้นใน `docker-compose.yml` (`./index.html:...:ro,z`, `./assets:...:ro,z`, `./nginx.conf:...:ro,z`) แล้ว `docker compose up -d --force-recreate`; ตรวจด้วย `curl -sS -o /dev/null -w '%{http_code}' http://127.0.0.1:8080/` ต้องได้ 200
+- **Date Added:** 2026-11-13
+
+### 🛠️ ป้าย A4 ใช้ DOM + `@media print` แทนการวาด canvas ทั้งแผ่น
+- **Context/Problem:** export A4 ด้วย canvas 2480×1754 ได้ภาพที่ข้อความไทยยาว ๆ ตัดบรรทัดผิด/ล้นกล่อง และผู้ใช้รายงานว่า "บั๊ค ๆ" จึงเปลี่ยนมาใช้ป้ายชื่อ printable แทน
+- **Root Cause:** canvas ต้องวัดข้อความและตัดบรรทัดเอง (`measureText`/`Intl.Segmenter`) ทำให้ layout เปราะเมื่อความยาวชื่อ/สถิติเปลี่ยน; DOM engine จัดการการตัดบรรทัดภาษาไทยได้ตรงกว่า
+- **Correct Pattern/Solution:** ใช้ `.bdg-sheet` เดียวกันทั้ง preview และ `#badgePrint` แล้วกำหนด `@page { size: A4 landscape; margin: 0 }` + `#badgePrint .bdg-sheet { width: 297mm; height: 210mm }` + `body > * { display:none }` เหลือเฉพาะ `#badgePrint`; วัดว่า `.bdg-info` ไม่ล้น `.bdg-sheet` (ความสูง content ≤ พื้นที่) ก่อนเพิ่มแถวใหม่; ใช้ `grid-template-columns: max-content 1fr` + `white-space: nowrap` ที่คีย์เพื่อไม่ให้คำไทยแตกกลางคำ
+- **Date Added:** 2026-11-13
+
+### 🛠️ แก้เฉพาะ CSS/JS แต่ `?v=` ไม่ bump — เบราว์เซอร์ค้างไฟล์เก่า
+- **Context/Problem:** แก้ `app.css`/`gs-badge.js` แล้ว `build_data.py` ไม่ bump `?v=` เพราะ bundle ข้อมูลไม่เปลี่ยน ผู้ใช้ยังเห็นของเก่า (และ CDP ที่ cache ไว้ก็เห็นของเก่า)
+- **Root Cause:** build bump เฉพาะเมื่อ `app-data.js` เปลี่ยน — การแก้ฝั่ง frontend อย่างเดียวไม่แตะ bundle
+- **Correct Pattern/Solution:** เพิ่มธง `--bump` ให้ `build_data.py` แล้วรัน `python3 tools/build_data.py --bump` หลังแก้ CSS/JS; เวลาตรวจด้วย headless Chrome ให้ `Network.setCacheDisabled: true` ก่อน navigate ไม่งั้นเห็นภาพเก่าแล้วเข้าใจผิดว่าแก้ไม่ติด
+- **Date Added:** 2026-11-13
+
+### 🛠️ preview ป้าย = DOM 9:16 ต้องคุมสัดส่วนด้วย `cqw` ให้ตรง canvas
+- **Context/Problem:** ต้องการให้หน้าเว็บโชว์การ์ด IG Story (แนวตั้ง) ก่อนกดดาวน์โหลด แต่ถ้าวาด canvas ใหม่ทุกเฟรมจะหนักตอนเล่นอัตโนมัติ และถ้าใช้ flex ธรรมดา ระยะห่างไม่ตรงกับ PNG
+- **Root Cause:** ดีไซน์ต้นฉบับเป็น canvas 1080×1920 ที่วางทุกอย่างด้วยพิกัดตายตัว; DOM ต้องแปลงพิกัดเป็น `cqw` ของการ์ด (`1cqw = width/100`) และความสูงการ์ด = 177.78cqw
+- **Correct Pattern/Solution:** `.igs-card { aspect-ratio: 1080/1920; container-type: inline-size }` แล้วแปลงทุกค่า ×100/1080 เป็น cqw (เช่น 30px → 2.78cqw, 600px → 55.6cqw); ผังจิ๋วใช้ `grid-template-columns/rows: repeat(15/10, 1fr)` + `height: 55.6cqw`; ใช้ `opacity:.82` กับช่องที่ไม่ใช่ที่นั่งเพื่อให้ขาวออกเทาเหมือน canvas; ตรวจด้วยการวัด `getBoundingClientRect` เทียบสัดส่วน canvas (กริดจบ ~73%, คำคม ~77–87%)
+- **Date Added:** 2026-11-13
