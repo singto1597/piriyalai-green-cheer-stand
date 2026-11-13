@@ -292,19 +292,33 @@
   const seatIndex = () => (state.seat ? SEAT_INDEX.get(state.seat) : -1);
   let fullAttempt = 0;
 
+  /* ค่าเริ่มต้นเมื่อเปิดหน้าโดยไม่มี hash ระบุตำแหน่ง: เฟรมถ้วยรางวัล + เลข 1
+     (รหัส 4.7 = เฟรม 64 ในลำดับแสดง) ให้หน้าแรกที่เปิดเห็นภาพความสำเร็จก่อน
+     — ลิงก์ที่ระบุ song/step ยังทำงานตามปกติ */
+  const DEFAULT_STEP_CODE = '4.7';
+
+  function applyDefaultStep() {
+    const target = flat.find((x) => x.code === DEFAULT_STEP_CODE);
+    if (!target) return;
+    state.si = target.si;
+    state.step = target.i;
+  }
+
   function readHash() {
     const raw = location.hash.replace(/^#/, '');
-    if (!raw) return;
+    if (!raw) return false;
     let p;
-    try { p = new URLSearchParams(raw); } catch (e) { return; }
+    try { p = new URLSearchParams(raw); } catch (e) { return false; }
+    let hasPos = false;
     const v = p.get('view');
     if (['stand', 'songbook', 'gallery', 'analysis', 'badge'].includes(v)) state.view = v;
     const s = parseInt(p.get('song'), 10);
-    if (s >= 1 && s <= songs.length) state.si = s - 1;
+    if (s >= 1 && s <= songs.length) { state.si = s - 1; hasPos = true; }
     const st = parseInt(p.get('step'), 10);
     const max = songs[state.si].steps.length;
-    if (st >= 1 && st <= max) state.step = st - 1;
+    if (st >= 1 && st <= max) { state.step = st - 1; hasPos = true; }
     state.seat = normalizeSeat(p.get('seat'));
+    return hasPos;
   }
 
   let hashTimer = null;
@@ -2632,7 +2646,7 @@
 
   /* ---------- init ---------- */
   function init() {
-    readHash();
+    if (!readHash()) applyDefaultStep();
     buildStandGrid();
     $('#gSong').innerHTML = '<option value="all">ทุกหน้า (10)</option>'
       + songs.map((s) => `<option value="${s.si}">${s.id}. ${esc(s.title)}</option>`).join('');
